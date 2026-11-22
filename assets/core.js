@@ -289,6 +289,14 @@
     C.defaults.plugins.tooltip.enabled = false;
     C.defaults.plugins.tooltip.external = EB.chartTip;
     // empty state: a chart without data says so instead of showing blank axes
+    // selected row band (horizontal bar charts): options.plugins.ebRow = { index, color }
+    if (!EB._rowReg) { EB._rowReg = true; C.register({ id: "ebRow", beforeDatasetsDraw(ch, args, o) {
+      if (!o || o.index == null || o.index < 0) return;
+      const y = ch.scales.y, n = ch.data.labels.length; if (!y || !n) return;
+      const h = (y.bottom - y.top) / n, cy = y.getPixelForValue(o.index);
+      const g = ch.ctx; g.save(); g.fillStyle = o.color || "rgba(235,104,52,.13)";
+      g.beginPath(); (g.roundRect ? g.roundRect(4, cy - h / 2, ch.width - 8, h, 5) : g.rect(4, cy - h / 2, ch.width - 8, h)); g.fill(); g.restore();
+    } }); }
     if (!EB._emptyReg) { EB._emptyReg = true; C.register({ id: "ebEmpty", afterDraw(ch) {
       const any = ch.data.datasets.some((d) => !d.hidden && (d.data || []).some((v) => (typeof v === "object" && v ? v.y || v.x : v)));
       if (any || !ch.chartArea) return;
@@ -332,7 +340,7 @@
     el.style.left = x + "px"; el.style.top = y + "px"; el.style.opacity = 1;
   };
   EB.chart = function (id, cfg) {
-    if (EB.charts[id]) EB.charts[id].destroy();
+    if (EB.charts[id]) { EB.charts[id].destroy(); const t = document.getElementById("ctip"); if (t) t.style.opacity = 0; }
     const el = document.getElementById(id); if (!el || !window.Chart) return;
     // horizontal bars: resolve hover/click along the category axis (y), so highlight, tooltip and click hit the same row
     if (cfg.options && cfg.options.indexAxis === "y") {
@@ -345,7 +353,10 @@
       const orig = cfg.options.onClick;
       cfg.options.onClick = (e, els, ch) => {
         const hit = ch.getElementsAtEventForMode(e.native, "nearest", { intersect: true }, true);
-        orig(e, hit.length ? hit : els.slice(0, 1), ch);
+        const pick = hit.length ? hit : els.slice(0, 1);
+        const ev = { native: e.native, x: e.x, y: e.y, type: e.type };
+        // run after Chart.js has finished handling this event: the action may rebuild this very chart
+        setTimeout(() => { const t = document.getElementById("ctip"); if (t) t.style.opacity = 0; orig(ev, pick, ch); }, 0);
       };
       if (!cfg.options.onHover) cfg.options.onHover = (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; };
     }

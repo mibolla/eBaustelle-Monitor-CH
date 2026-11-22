@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=d420afd3"></script>
+<script src="assets/core.js?v=30b97621"></script>
 </head>
 <body>
 <main class="wrap">
@@ -168,8 +168,8 @@ function drawFlex(){
     options:{indexAxis:"y",scales:{x:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}},y:Object.assign({stacked:true,ticks:{autoSkip:false,font:{size:11}}},EB.axisPlain)},
       onClick:(e,els)=>{ if(els.length) selDso(top[els[0].index].op); },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; fpHover(els.length ? top[els[0].index].op : null, "chart"); },
-      plugins:{legend:{position:"top",align:"start"},tooltip:{mode:"index",callbacks:{title:it=>top[it[0].dataIndex].op,footer:it=>{const o=top[it[0].dataIndex]; return `${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross\n${EB.n0(o.fa)} m² Geschossfläche\nKlick: Netzbetreiber filtern`;}}}}}});
-  fpLayer.clearLayers(); FPM = {}; FPTOP = top; FPBIG = big;
+      plugins:{ebRow:{index:top.findIndex(o=>o.op===st.d),color:"rgba(235,104,52,.14)"},legend:{position:"top",align:"start"},tooltip:{mode:"index",callbacks:{title:it=>top[it[0].dataIndex].op,footer:it=>{const o=top[it[0].dataIndex]; return `${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross\n${EB.n0(o.fa)} m² Geschossfläche\nKlick: Netzbetreiber filtern`;}}}}}});
+  fpLayer.clearLayers(); FPM = {}; FPTOP = top; FPBIG = big; fpHot = null;
   const maxN = FP.length ? FP[0].n : 1, gc = gcol();
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
     const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:c2,fillOpacity:st.d?0.3:0.55};
