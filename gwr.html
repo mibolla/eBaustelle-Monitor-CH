@@ -66,11 +66,19 @@ const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.m
 const st = { sim:"", sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
 /* canton hover / selection on the main map: orange boundary like the grid-operator areas */
 let CANS = [], canHot = null;
+// hovered and selected canton: three orange shades (projektiert / bewilligt / im Bau), others keep their status blue
+const ORAMP = ["#f6c7ad", "#ef9467", "#d9541f"];
+function canCols(cans, s, hot){ const gc = gcol(); return cans.map(c => (c[0]===st.c || c[0]===hot) ? ORAMP[s] : EB.dim(gc[s], st.sel.includes(s))); }
 const canSel = L.layerGroup(), canHov = L.layerGroup();
 function canHover(k){
   if (k === canHot) return; canHot = k;
   const ch = EB.charts.cCan;
-  if (ch) { ch.$ebRow = Object.assign({}, ch.$ebRow, {hover: k ? CANS.findIndex(c=>c[0]===k) : -1}); if (!k) ch.setActiveElements([]); ch.update("none"); }
+  if (ch) {
+    ch.$ebRow = Object.assign({}, ch.$ebRow, {index: CANS.findIndex(c=>c[0]===st.c), hover: k ? CANS.findIndex(c=>c[0]===k) : -1});
+    ch.data.datasets.forEach((d,s) => { d.backgroundColor = d.hoverBackgroundColor = canCols(CANS, s, k); });
+    if (!k) { ch.setActiveElements([]); ch.tooltip.setActiveElements([], {x:0,y:0}); }
+    ch.update("none");
+  }
   if (!k || k === st.c) { canHov.clearLayers(); return; }
   EB.drawArea(map, canHov, EB.cantonArea(k), st.c ? {noFill:true, dash:"5 4", weight:2} : {fill:0.13, weight:2.5});
 }
@@ -142,7 +150,7 @@ function draw(){
     kpi("c_gwr","Fertiggestellt seit 2016",EB.n0(doneN),"Gebäude (Baujahr ≥ 2016)")+kpi("c_gwr","Grosse Gebäude ≥ 5000 m²",EB.n0(pipe.filter(g=>(g.fa||0)>=5000).length),"in der Pipeline – relevante Baustellen-Lasten");
   const gc = gcol();
   const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>st.sel.reduce((x,s)=>x+b[1][s],0)-st.sel.reduce((x,s)=>x+a[1][s],0));
-  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
+  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:canCols(cans,s,canHot),hoverBackgroundColor:canCols(cans,s,canHot),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
     options:{scales:{x:Object.assign({stacked:true},EB.axisPlain,{ticks:{autoSkip:false,maxRotation:0,minRotation:0,font:{size:10.5}}}),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; setCanton(st.c===c?"":c); },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; canHover(els.length ? cans[els[0].index][0] : null); },
     plugins:{ebArms:{on:true},ebRow:{index:cans.findIndex(c=>c[0]===st.c),hover:canHot?cans.findIndex(c=>c[0]===canHot):-1},legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
@@ -150,6 +158,7 @@ function draw(){
           fontColor:st.sel.includes(s)?EB.css("--text-2"):EB.css("--muted")}))}},
       tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)}${st.sel.includes(c.datasetIndex)?"":" (abgewählt)"}`,footer:()=>"Klick: Kanton wählen und hinzoomen"}}}}});
   CANS = cans; canHot = null;
+  if (EB.charts.cCan) { EB.charts.cCan.$ebRow = {index: cans.findIndex(c=>c[0]===st.c), hover: -1}; EB.charts.cCan.draw(); }
   const yrs = [...new Set(G.done.map(d=>d[0]))].filter(y=>y>=2016&&y<=2026).sort();
   EB.chart("cDone",{type:"bar",data:{labels:yrs,datasets:[EB.bar({label:"Geschossfläche",backgroundColor:gc[3],data:yrs.map(y=>G.done.filter(d=>d[0]===y&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[3],0))})]},
     options:{scales:{x:EB.axisPlain,y:{ticks:{callback:v=>EB.n0(v/1e6)+" Mio m²"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.n0(c.raw)+" m²",afterLabel:c=>EB.n0(G.done.filter(d=>d[0]===yrs[c.dataIndex]&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[2],0))+" Gebäude"}}}}});
