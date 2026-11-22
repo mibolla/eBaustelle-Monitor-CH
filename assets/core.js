@@ -719,4 +719,18 @@
     t.textContent = msg; t.classList.add("on");
     clearTimeout(EB._toastT); EB._toastT = setTimeout(() => t.classList.remove("on"), 4200);
   };
+
+  /* clickable map legend: each class can be hidden on that map; hidden entries are faded (same look as chart legends)
+     items: [{key, label, color, round}] · hidden: Set of keys · onChange(): redraw the map */
+  EB.mapLegend = function (el, items, hidden, onChange, note) {
+    el.classList.add("maplegend-i");
+    el.innerHTML = items.map((it) => `<button type="button" class="lg-item${hidden.has(it.key) ? " off" : ""}" data-k="${it.key}" aria-pressed="${!hidden.has(it.key)}" title="${hidden.has(it.key) ? "Einblenden" : "Auf der Karte ausblenden"}">
+        <span class="swatch" style="background:${it.color};${it.round ? "border-radius:50%" : ""}"></span>${EB.esc(it.label)}</button>`).join("") +
+      (hidden.size ? `<button type="button" class="lg-reset">alle</button>` : "") + (note ? `<span class="muted lg-note">${note}</span>` : "");
+    el.querySelectorAll(".lg-item").forEach((b) => (b.onclick = () => {
+      const k = isNaN(+b.dataset.k) ? b.dataset.k : +b.dataset.k;
+      hidden.has(k) ? hidden.delete(k) : hidden.add(k); onChange();
+    }));
+    const r = el.querySelector(".lg-reset"); if (r) r.onclick = () => { hidden.clear(); onChange(); };
+  };
 })();

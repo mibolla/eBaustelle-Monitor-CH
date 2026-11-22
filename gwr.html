@@ -104,15 +104,15 @@ function draw(){
   EB.chart("cSize",{type:"bar",data:{labels:bins.map(b=>b[2]).concat(["unbekannt"]),datasets:[EB.bar({label:"Gebäude",backgroundColor:["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")].map((c,i)=>EB.dim(c,st.sb==null||st.sb===i)),data:[0,1,2,3,4,5].map(i=>pipeS.filter(g=>inBin(g,i)).length)})]},
     options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const i=els[0].index; st.sb = st.sb===i?null:i; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Grösse filtern"}}}}});
   drawFlex();
-  layer.setPoints(pipe.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa?Math.max(1.6,Math.min(9,Math.sqrt(g.fa)/12)):1.6,g})));
-  document.getElementById("leg").innerHTML = G.status.slice(0,3).map((t,i)=>`<span><span class="swatch" style="background:${gc[i]};border-radius:50%"></span>${t}</span>`).join("")+'<span class="muted">Grösse ∝ Geschossfläche · offizieller GWR-Layer ab Zoom 15</span>';
+  layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa?Math.max(1.6,Math.min(9,Math.sqrt(g.fa)/12)):1.6,g})));
+  EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, "Grösse ∝ Geschossfläche · offizieller GWR-Layer ab Zoom 15");
   const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
       <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${g.dso?EB.entList("dso",g.dso,"<br>"):"–"}</td>
       <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid)}" target="_blank" rel="noopener">Objekt auf Karte ↗</a></td></tr>`).join("")+"</tbody>";
 }
-let TOP = [], FP = [];
+let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
 const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);

@@ -195,7 +195,7 @@ document.getElementById("mbTop").outerHTML = EB.mapBtn("mbTop");
 document.getElementById("mbMun").onclick = () => EB.listMap("Gemeinden mit den meisten mittleren und grossen Baustellen",
   MUNROWS.map(o=>({lat:o.k?o.lat/o.k:null, lon:o.k?o.lon/o.k:null, label:`${o.name} (${o.c})`, sub:o.dso||"", value:`${o.n1} / ${o.n20} gross`})), {note:"Punkt = Mittel der Projektstandorte"});
 document.getElementById("mbTop").onclick = () => EB.listMap("Grösste Projekte", EB.filtered().filter(p=>p.value).sort((a,b)=>b.value-a.value).slice(0,40).map(projItem), {note:"nach aktuellem Filter"});
-let hlMarker = null;
+let hlMarker = null; const HID_T = new Set();
 function hl(id){ if (hlMarker) { hlMarker.remove(); hlMarker=null; } const p = id && EB._PI[id]; if (p && p.lat) hlMarker = L.circleMarker([p.lat,p.lon],{radius:14,color:EB.css("--text"),weight:2,fill:false}).addTo(map); }
 function drawMap(F){
   if(!map){ map = EB.baseMap("miniMap");  const PLy = EB.PointLayer(L);
@@ -203,9 +203,9 @@ function drawMap(F){
     map.on("moveend", ()=>{ if (document.getElementById("bboxF").checked) { bbox = map.getBounds(); draw(); } });
     document.getElementById("bboxF").onchange = (e)=>{ bbox = e.target.checked ? map.getBounds() : null; draw(); }; }
   const col = TCOL();
-  const pts = F.filter(p=>p.lat&&p.geo<=2).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:col[p.type],r:p.value?Math.max(2,Math.min(14,Math.sqrt(p.value/1e6)*1.6)):2,p}));
+  const pts = F.filter(p=>p.lat&&p.geo<=2&&!HID_T.has(p.type)).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:col[p.type],r:p.value?Math.max(2,Math.min(14,Math.sqrt(p.value/1e6)*1.6)):2,p}));
   layer.setPoints(pts);
-  document.getElementById("mapLegend").innerHTML = PR.types.map((t,i)=>`<span><span class="swatch" style="background:${col[i]}"></span>${t}</span>`).join("")+`<span class="muted">Fläche ∝ Zuschlagssumme · ${EB.n0(pts.length)} verortete Projekte · Mausrad = Zoom</span>`;
+  EB.mapLegend(document.getElementById("mapLegend"), PR.types.map((t,k)=>({key:k,label:t,color:col[k]})), HID_T, ()=>drawMap(EB.filtered()), `Fläche ∝ Zuschlagssumme · ${EB.n0(pts.length)} verortete Projekte · Klick auf Legende = ein/aus`);
 }
 if (innerWidth < 1000) document.getElementById("row1").style.gridTemplateColumns = "1fr";
 if (innerWidth < 1000) document.getElementById("lastRow").style.gridTemplateColumns = "1fr";
