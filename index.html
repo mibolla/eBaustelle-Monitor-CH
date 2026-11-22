@@ -5,12 +5,12 @@
 <title>Baustellen-Monitor CH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=87743386">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="data/projects.js"></script><script src="data/firms.js"></script>
-<script src="data/basemap.js"></script>
-<script src="assets/core.js"></script>
+<script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script>
+<script src="data/basemap.js?v=5110ee4a"></script>
+<script src="assets/core.js?v=c569c3b5"></script>
 </head>
 <body>
 <main class="wrap">
@@ -158,7 +158,8 @@ function draw(){
         if (f[k] && f.y0===y && f.y1===y) { f[k]=false; f.y0=2016; f.y1=2026; } else { f.util=k==="util"; f.grid=k==="grid"; f.y0=f.y1=y; } EB.apply(); },
       plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>EB.toggleFlag(item.datasetIndex?"grid":"util")},tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.chf(c.raw)}`,footer:()=>"Klick: Merkmal + Jahr filtern"}}}}});
 
-  drawFirms(F); drawTop(F); drawMun(F); drawMap(EB.filtered());
+  // each block is drawn independently: a problem in one must never leave the map or the tables empty
+  [()=>drawMap(EB.filtered()), ()=>drawFirms(F), ()=>drawTop(F), ()=>drawMun(F)].forEach(fn=>{ try { fn(); } catch (err) { console.error(err); } });
 }
 const ROLE_TABS = [["contractor","Bauunternehmen",p=>p.con],["architect","Architektur",p=>p.arch],["eplan","Elektro-/HLKSE-Planung",p=>p.eplan],["einst","Elektroinstallation",p=>p.einst]];
 function drawFirms(F){
