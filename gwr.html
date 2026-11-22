@@ -127,6 +127,31 @@ if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColu
 const fpMap = EB.baseMap("fpMap"); 
 const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
+/* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
+let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null;
+const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
+function fpHover(op, from){
+  if (op === fpHot) return;
+  const prev = fpHot; fpHot = op;
+  if (prev && FPM[prev]) { FPM[prev].mk.setStyle(FPM[prev].style); FPM[prev].mk.closeTooltip(); }
+  const ch = EB.charts.cFP;
+  if (ch) {
+    const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op, [o1,o2] = ORANGE();
+    ch.data.datasets[0].backgroundColor = FPTOP.map(o => o.op===op ? o1 : EB.dim(c2,on(o)));
+    ch.data.datasets[1].backgroundColor = FPTOP.map(o => o.op===op ? o2 : EB.dim(c1,on(o)));
+    if (from === "map") { const i = FPTOP.findIndex(o=>o.op===op); if (i>=0) { ch.tooltip.setActiveElements([{datasetIndex:0,index:i},{datasetIndex:1,index:i}], {x:0,y:0}); } else ch.tooltip.setActiveElements([], {x:0,y:0}); }
+    ch.update("none");
+  }
+  const sel = st.d && FPM[st.d];
+  if (op && FPM[op]) {
+    const [o1] = ORANGE();
+    FPM[op].mk.setStyle({fillColor:o1, fillOpacity:0.85, color:EB.css("--surface"), weight:2.5}).bringToFront();
+    if (from === "chart") FPM[op].mk.openTooltip();
+    if (!sel || st.d !== op) fpSites.setPoints(FPM[op].o.sites.map(g=>({lat:g.lat,lon:g.lon,color:o1,r:g.fa>=FPBIG?5:2.5,alpha:.9,g})));
+  } else if (!sel) fpSites.setPoints([]);
+  else fpSites.setPoints(FPM[st.d].o.sites.map(g=>({lat:g.lat,lon:g.lon,color:gcol()[g.st],r:g.fa>=FPBIG?6:3.5,g})));
+}
+document.getElementById("cFP").addEventListener("mouseleave", ()=>fpHover(null,"chart"));
 const selDso = (d) => setDso(st.d===d ? "" : d);
 function drawFlex(){
   const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value, inclP = document.getElementById("fpProj").checked;
@@ -141,12 +166,16 @@ function drawFlex(){
       EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>EB.dim(c1,on(o)))})]},
     options:{indexAxis:"y",scales:{x:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}},y:Object.assign({stacked:true,ticks:{autoSkip:false,font:{size:11}}},EB.axisPlain)},
       onClick:(e,els)=>{ if(els.length) selDso(top[els[0].index].op); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; fpHover(els.length ? top[els[0].index].op : null, "chart"); },
       plugins:{legend:{position:"top",align:"start"},tooltip:{mode:"index",callbacks:{title:it=>top[it[0].dataIndex].op,footer:it=>{const o=top[it[0].dataIndex]; return `${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross\n${EB.n0(o.fa)} m² Geschossfläche\nKlick: Netzbetreiber filtern`;}}}}}});
-  fpLayer.clearLayers();
+  fpLayer.clearLayers(); FPM = {}; FPTOP = top; FPBIG = big;
   const maxN = FP.length ? FP[0].n : 1, gc = gcol();
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
-    L.circleMarker([o.lat/o.n,o.lon/o.n],{radius:r,weight:1.5,color:EB.css("--surface"),fillColor:st.d===o.op?EB.css("--accent"):c2,fillOpacity:st.d&&st.d!==o.op?0.15:0.55})
-      .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op)).addTo(fpLayer); });
+    const style = {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:st.d===o.op?EB.css("--accent"):c2,fillOpacity:st.d&&st.d!==o.op?0.15:0.55};
+    const mk = L.circleMarker([o.lat/o.n,o.lon/o.n],style)
+      .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
+      .on("mouseover",()=>fpHover(o.op,"map")).on("mouseout",()=>fpHover(null,"map")).addTo(fpLayer);
+    FPM[o.op] = {mk, style, o}; });
   const sel = st.d && acc[st.d];
   fpSites.setPoints(sel ? sel.sites.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa>=big?6:3.5,g})) : []);
   if (sel) fpMap.fitBounds(L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])).pad(0.1), {maxZoom:13});
