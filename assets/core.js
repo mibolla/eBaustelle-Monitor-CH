@@ -334,6 +334,12 @@
   EB.chart = function (id, cfg) {
     if (EB.charts[id]) EB.charts[id].destroy();
     const el = document.getElementById(id); if (!el || !window.Chart) return;
+    // horizontal bars: resolve hover/click along the category axis (y), so highlight, tooltip and click hit the same row
+    if (cfg.options && cfg.options.indexAxis === "y") {
+      cfg.options.interaction = Object.assign({ mode: "index", intersect: false }, cfg.options.interaction, { axis: "y" });
+      cfg.options.plugins = cfg.options.plugins || {};
+      cfg.options.plugins.tooltip = Object.assign({}, cfg.options.plugins.tooltip, { axis: "y" });
+    }
     if (cfg.options && cfg.options.onClick) {
       // click acts on the mark under the cursor (exact segment), falling back to the hovered category
       const orig = cfg.options.onClick;
