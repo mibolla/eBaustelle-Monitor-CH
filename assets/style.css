@@ -262,3 +262,14 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 .mw-row .s{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted);min-width:58px}
 .mw-head{display:grid;grid-template-columns:1fr auto auto;gap:10px;font-size:11px;color:var(--muted);padding:6px 6px 2px;text-transform:uppercase;letter-spacing:.04em}
 .mw-ask{background:var(--surface-2);border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12.5px}
+/* arms, logos, suggestion box */
+img.emb{vertical-align:-3px;margin-right:6px;object-fit:contain;border-radius:2px}
+img.emb.logo{border-radius:4px;background:#fff}
+.pc-title img.emb{vertical-align:-4px}
+.acbox{position:fixed;z-index:3300;display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.16);padding:6px;max-height:380px;overflow:auto;width:max-content;max-width:min(440px,calc(100vw - 16px))}
+.ac-grp{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:6px 8px 3px}
+.ac-it{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:13px}
+.ac-it:hover,.ac-it.on{background:var(--accent-soft)}
+.ac-ic{display:flex;align-items:center;justify-content:center}.ac-ic img.emb{margin:0}
+.ac-r{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mw-row .nm{display:flex;align-items:center;gap:0}

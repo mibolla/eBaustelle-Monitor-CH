@@ -214,7 +214,7 @@
         <div class="fgroup"><span class="flabel">Kanton</span><div class="dd" id="ddC"><button class="chip ${f.cantons.length ? "on" : ""}" id="ddCb">${f.cantons.length ? f.cantons.join(", ") : "alle"} ▾</button>
           <div class="panel"><div class="cgrid">${CANTONS.map((c) => `<label><input type="checkbox" value="${c}" ${f.cantons.includes(c) ? "checked" : ""}>${c}</label>`).join("")}</div>
           <div style="margin-top:6px;display:flex;gap:6px"><button class="chip" id="cAll">keine Auswahl</button></div></div></div></div>
-        <div class="fgroup"><span class="flabel">Gemeinde</span>${(f.muns || []).map((m) => { const [n, k] = m.split("|"); return `<button class="chip on" data-mun="${EB.esc(m)}" title="Entfernen">${EB.esc(n)} (${k}) ✕</button>`; }).join("")}
+        <div class="fgroup"><span class="flabel">Gemeinde</span>${(f.muns || []).map((m) => { const [n, k] = m.split("|"); return `<button class="chip on" data-mun="${EB.esc(m)}" title="Entfernen">${EB.armMun(n, k, 14)}${EB.esc(n)} (${k}) ✕</button>`; }).join("")}
           <input type="text" list="munL" id="fMun" placeholder="${f.muns && f.muns.length ? "+ weitere…" : "Gemeinde…"}" style="width:150px"><datalist id="munL">${munOptions()}</datalist></div>
         <div class="fgroup"><span class="flabel">Versorger</span><input type="text" list="dsoL" id="fDso" placeholder="Netzbetreiber…" value="${EB.esc(f.dso)}" style="width:190px"><datalist id="dsoL">${dsoList.map((d) => `<option value="${EB.esc(d)}">`).join("")}</datalist></div>
         <div class="fgroup"><span class="flabel">Typ</span>${chips("types", P.types)}</div>
@@ -245,6 +245,13 @@
       el.querySelector("#ddCb").onclick = (e) => { e.stopPropagation(); dd.classList.toggle("open"); };
       dd.querySelectorAll("input").forEach((i) => (i.onchange = () => { f.cantons = [...dd.querySelectorAll("input:checked")].map((x) => x.value); const nm = f.muns.length; dropMunsOutside(); el.querySelector("#munL").innerHTML = munOptions(); if (f.muns.length !== nm) { changed(); return; } changed(false); el.querySelector("#ddCb").textContent = (f.cantons.length ? f.cantons.join(", ") : "alle") + " ▾"; el.querySelector("#ddCb").classList.toggle("on", !!f.cantons.length); }));
       el.querySelector("#cAll").onclick = () => { f.cantons = []; changed(); };
+      EB.autocomplete(el.querySelector("#fMun"), EB.munSource(() => f.cantons), (it) => {
+        if (!f.muns.includes(it.value)) f.muns.push(it.value);
+        const k = it.value.split("|")[1];
+        if (f.cantons.length && !f.cantons.includes(k)) { EB.toast(`Kantons-Filter ${f.cantons.join(", ")} entfernt – ${it.label} liegt in ${k}`); f.cantons = []; }
+        changed();
+      });
+      EB.autocomplete(el.querySelector("#fDso"), EB.dsoSource, (it) => { el.querySelector("#fDso").value = it.value; f.dso = it.value; changed(); });
       el.querySelector("#fMun").onchange = (e) => {
         const m = e.target.value.trim().match(/^(.*) \(([A-Z]{2})\)$/);
         if (!m || !MUNS.includes(m[1] + "|" + m[2])) { e.target.value = ""; return; }
@@ -331,7 +338,7 @@
     const foot = (t.footer || []).join("\n").split("\n").filter(Boolean);
     const hint = foot.filter((f) => /^Klick/.test(f)), facts = foot.filter((f) => !/^Klick/.test(f));
     const ttl = (t.title || []).filter(Boolean).map((x) => TIP_SHORT[x] || x).join(" ");
-    el.innerHTML = `${ttl ? `<div class="ct-title">${EB.esc(ttl)}</div>` : ""}${rows}
+    el.innerHTML = `${ttl ? `<div class="ct-title">${EB.titleIcon((t.title || []).join(" "))}${EB.esc(ttl)}</div>` : ""}${rows}
       ${facts.length ? `<div class="ct-facts">${facts.map(EB.esc).join("<br>")}</div>` : ""}${hint.length ? `<div class="ct-hint">${EB.esc(hint[0].split(" · ")[0])}</div>` : ""}`;
     const r = ctx.chart.canvas.getBoundingClientRect();
     const w = el.offsetWidth, h = el.offsetHeight;
@@ -443,10 +450,12 @@
   EB._basemaps = [];
   document.addEventListener("eb-theme", () => EB._basemaps.forEach((f) => f()));
   EB.baseMap = function (id, opts) {
-    opts = Object.assign({ preferCanvas: true, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, scrollWheelZoom: true, minZoom: 7, maxZoom: 19,
+    opts = Object.assign({ preferCanvas: true, zoomSnap: 0.1, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, scrollWheelZoom: true, minZoom: 6.5, maxZoom: 19,
       maxBounds: [[44.9, 4.6], [48.7, 11.9]], maxBoundsViscosity: 0.8 }, opts || {});
     const map = L.map(id, opts);
-    map.fitBounds(EB.CH_BOUNDS);
+    // fit Switzerland tightly into the frame (fractional zoom), also when the frame is resized
+    map.fitBounds(EB.CH_BOUNDS, { padding: [6, 6] });
+    map._ebHome = () => map.flyToBounds(EB.CH_BOUNDS, { padding: [6, 6], duration: 0.6 });
     map.createPane("basemap"); map.getPane("basemap").style.zIndex = 150;
     const rnd = L.canvas({ pane: "basemap", padding: 0.3 });
     const B = window.BASEMAP;
@@ -473,7 +482,7 @@
         const b = L.DomUtil.create("a", "leaflet-bar eb-home");
         b.href = "#"; b.title = "Ganze Schweiz anzeigen"; b.setAttribute("role", "button"); b.setAttribute("aria-label", "Ganze Schweiz anzeigen");
         b.innerHTML = EB.CH_ICON;
-        L.DomEvent.on(b, "click", (e) => { L.DomEvent.stop(e); map.flyToBounds(EB.CH_BOUNDS, { duration: 0.6 }); });
+        L.DomEvent.on(b, "click", (e) => { L.DomEvent.stop(e); map._ebHome(); });
         L.DomEvent.disableClickPropagation(b);
         return b;
       },
@@ -563,7 +572,7 @@
     return `<div class="pcard">
       <div class="pc-top"><span class="pc-status" style="--c:${stCol}">${EB.esc(o.status || "")}</span><span class="pc-id">EGID ${g.egid}</span></div>
       <div class="pc-title">${EB.esc(g.addr || "Adresse nicht erfasst")}</div>
-      <div class="pc-sub">${EB.esc(g.munName || "")} ${EB.esc(g.canton || "")}</div>
+      <div class="pc-sub">${EB.armMun(g.munName, g.canton, 14)}${EB.esc(g.munName || "")} ${EB.arm("c", g.canton, 13)}${EB.esc(g.canton || "")}</div>
       <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
         ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", g.dso ? EB.entList("dso", g.dso, "<br>") : "")}</dl>
       <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Karte", EB.lnk.gwrObj(g.egid))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
@@ -577,7 +586,7 @@
       <div class="pc-top"><span class="pc-status" style="--c:${col}">${EB.esc(p.typeName)}</span><span class="pc-id">${EB.esc(p.sizeName)} · ${p.y0 === p.y1 ? p.year : p.y0 + "–" + p.y1}</span></div>
       <div class="pc-title">${EB.esc(p.title)}</div>
       <div class="pc-sub">${EB.ent("auth", p.authName)}</div>
-      <dl class="pc-kv">${row("Ort", p.munName ? EB.ent("mun", p.munName, p.munName + " " + (p.canton || ""), p.canton) : "")}${row("Zuschläge", p.value ? EB.chf(p.value) : "")}${row("Vergabeart", EB.PROC_LABEL[P.procs[p.proc]] || "")}
+      <dl class="pc-kv">${row("Ort", p.munName ? EB.armMun(p.munName, p.canton, 14) + EB.ent("mun", p.munName, p.munName + " " + (p.canton || ""), p.canton) : "")}${row("Zuschläge", p.value ? EB.chf(p.value) : "")}${row("Vergabeart", EB.PROC_LABEL[P.procs[p.proc]] || "")}
         ${row("Bauunternehmen", firms)}${row("Architektur", arch)}${row("Netzbetreiber", p.dsoName ? EB.entList("dso", p.dsoName, "<br>") : "")}${row("CO₂ (Schätzung)", p.co2 ? EB.n0(p.co2) + " t" : "")}</dl>
       <div class="pc-btns">${EB.btn("Projektdetails", EB.lnk.proj(p.id), "primary")}${EB.btn("Zoomen", "", "zoom")}${EB.btn("GWR-Karte am Ort", EB.lnk.gwrMap(p.lat, p.lon))}</div>
       <div class="pc-src">Quelle: simap.ch · ${p.nn} Publikationen</div></div>`;
@@ -626,7 +635,7 @@
      → small window with key facts and explicit actions (nothing navigates until a link is clicked) */
   EB.ent = (type, value, label, extra) =>
     `<span class="ent" role="button" tabindex="0" data-ent="${type}" data-v="${EB.esc(value)}"${extra ? ` data-x="${EB.esc(extra)}"` : ""}>${EB.esc(label == null ? value : label)}</span>`;
-  EB.entList = (type, str, sep) => (str || "").split(sep || " | ").filter(Boolean).map((v) => EB.ent(type, v)).join(sep === undefined ? " · " : sep);
+  EB.entList = (type, str, sep) => (str || "").split(" | ").filter(Boolean).map((v) => (type === "dso" ? EB.logo(v, 14) : "") + EB.ent(type, v)).join(sep === undefined ? " · " : sep);
   const ROLE_NAME = (r) => (window.PROJ && PROJ.role_label[r]) || ({ contractor: "Bauunternehmen", planner: "Planer (übrige)" })[r] || r;
   const goFilter = (patch, page) => {
     const f = EB.filters;
@@ -653,7 +662,7 @@
       const ps = P.filter((p) => p.munName === v && (!x || p.canton === x));
       const val = ps.reduce((s, p) => s + (p.value || 0), 0);
       const geo = ps.find((p) => p.lat && p.geo <= 2);
-      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s3)">Gemeinde</span></div><div class="pc-title">${EB.esc(v)} ${EB.esc(x || "")}</div>
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s3)">Gemeinde</span><span class="pc-id">${EB.arm("c", x, 14)}${EB.esc(x || "")}</span></div><div class="pc-title">${EB.armMun(v, x, 22)}${EB.esc(v)}</div>
         <dl class="pc-kv">${stat("Projekte", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(val))}${stat("Netzbetreiber", EB.esc((ps[0] || {}).dsoName || ""))}</dl>
         <div class="pc-btns">${act("Projekte anzeigen →", () => goFilter({ muns: [v + "|" + x] }, "projects.html"), "primary")}${act("Übersicht filtern", () => goFilter({ muns: [v + "|" + x] }, "index.html"))}${geo ? EB.btn("GWR-Karte", EB.lnk.gwrMap(geo.lat, geo.lon)) : ""}</div>`;
     }
@@ -662,7 +671,7 @@
       const bfs = x;
       if (!window.PROJ) return `<div class="pc-top"><span class="pc-status" style="--c:var(--s4)">Netzbetreiber</span></div><div class="pc-title">${EB.esc(v)}</div>
         <div class="pc-btns" style="margin-top:10px">${act("Baustellen-Übersicht filtern →", () => goFilter({ dso: v }, "index.html"), "primary")}${EB.btn("ElCom", "https://www.strompreis.elcom.admin.ch")}</div>`;
-      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s4)">Netzbetreiber</span></div><div class="pc-title">${EB.esc(v)}</div>
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s4)">Netzbetreiber</span></div><div class="pc-title">${EB.logo(v, 20)}${EB.esc(v)}</div>
         <dl class="pc-kv">${stat("Projekte im Netzgebiet", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(ps.reduce((s, p) => s + (p.value || 0), 0)))}</dl>
         <div class="pc-btns">${act("Übersicht filtern →", () => goFilter({ dso: v }, "index.html"), "primary")}${act("Projekte anzeigen", () => goFilter({ dso: v }, "projects.html"))}${bfs ? EB.btn("ElCom-Tarife", EB.lnk.elcom(bfs)) : EB.btn("ElCom", "https://www.strompreis.elcom.admin.ch")}</div>`;
     }
@@ -827,5 +836,73 @@
     if (!EB._arcs) EB.opArea("__init__");
     const A = EB._arcs;
     return T.munis[bfs].map((r) => { const pts = []; r.forEach((i) => { const a = i >= 0 ? A[i] : A[~i].slice().reverse(); pts.push(...(pts.length ? a.slice(1) : a)); }); return pts; });
+  };
+
+  /* ---------------- coats of arms (Wikimedia Commons, licence per file in the tooltip) and utility icons */
+  EB.bfsOf = (name, canton) => {
+    if (!window.MUN) return null;
+    if (!EB._bfsIdx) { EB._bfsIdx = {}; Object.entries(MUN).forEach(([b, m]) => (EB._bfsIdx[m[0] + "|" + m[1]] = b)); }
+    return EB._bfsIdx[name + "|" + canton] || null;
+  };
+  EB.arm = function (type, key, size) {
+    const E = window.EMBLEMS; if (!E || key == null) return "";
+    const a = E.arms[type === "c" ? "c" : "m"][String(key)]; if (!a) return "";
+    const lic = [a[2], a[3]].filter(Boolean).join(", ");
+    return `<img class="emb" src="${a[0]}" alt="" height="${size || 16}" loading="lazy" title="Wappen · Wikimedia Commons${lic ? " · " + EB.esc(lic) : ""}">`;
+  };
+  EB.armMun = (name, canton, size) => EB.arm("m", EB.bfsOf(name, canton), size);
+  EB.logo = function (op, size) {
+    const E = window.EMBLEMS; if (!E || !op) return "";
+    const l = E.logos[op]; if (!l) return "";
+    return `<img class="emb logo" src="${l[0]}" alt="" height="${size || 16}" width="${size || 16}" loading="lazy" title="Logo/Website-Icon: ${EB.esc(l[1])}">`;
+  };
+  // icon for a chart-tooltip title: canton code → canton arms, operator name → logo
+  EB.titleIcon = (t) => (/^[A-Z]{2}$/.test(t) ? EB.arm("c", t, 15) : EB.logo(t, 15));
+
+  /* ---------------- search suggestions with arms / logos (replaces the plain browser list) */
+  EB.autocomplete = function (input, source, onPick) {
+    const box = document.createElement("div"); box.className = "acbox"; document.body.append(box);
+    let items = [], act = -1;
+    const place = () => { const r = input.getBoundingClientRect(); box.style.left = r.left + "px"; box.style.top = r.bottom + 4 + "px"; box.style.minWidth = Math.max(300, r.width) + "px"; };
+    const render = () => {
+      const q = input.value.trim();
+      items = q.length ? source(q) : [];
+      if (!items.length) { box.style.display = "none"; return; }
+      let html = "", grp = null;
+      items.forEach((it, i) => {
+        if (it.group && it.group !== grp) { grp = it.group; html += `<div class="ac-grp">${EB.esc(grp)}</div>`; }
+        html += `<div class="ac-it${i === act ? " on" : ""}" data-i="${i}"><span class="ac-ic">${it.icon || ""}</span><span class="ac-l">${EB.esc(it.label)}</span><span class="ac-r">${EB.esc(it.right || "")}</span></div>`;
+      });
+      box.innerHTML = html; place(); box.style.display = "block";
+      box.querySelectorAll(".ac-it").forEach((d) => (d.onmousedown = (e) => { e.preventDefault(); pick(+d.dataset.i); }));
+    };
+    const pick = (i) => { const it = items[i]; if (!it) return; box.style.display = "none"; input.value = ""; act = -1; onPick(it); };
+    input.setAttribute("autocomplete", "off"); input.removeAttribute("list");
+    input.addEventListener("input", () => { act = -1; render(); });
+    input.addEventListener("focus", render);
+    input.addEventListener("blur", () => setTimeout(() => (box.style.display = "none"), 120));
+    input.addEventListener("keydown", (e) => {
+      if (box.style.display !== "block") return;
+      if (e.key === "ArrowDown") { act = Math.min(items.length - 1, act + 1); render(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { act = Math.max(0, act - 1); render(); e.preventDefault(); }
+      else if (e.key === "Enter") { pick(act < 0 ? 0 : act); e.preventDefault(); e.stopImmediatePropagation(); }
+      else if (e.key === "Escape") box.style.display = "none";
+    });
+    window.addEventListener("scroll", () => { if (box.style.display === "block") place(); }, true);
+  };
+  // shared sources: municipalities (with arms, canton, population) and grid operators (with logo)
+  EB.munSource = (filterCanton) => (q) => {
+    if (!window.MUN) return [];
+    const ql = q.toLowerCase();
+    return Object.entries(MUN).filter(([b, m]) => m[0].toLowerCase().includes(ql) && (!filterCanton || !filterCanton().length || filterCanton().includes(m[1])))
+      .sort((a, b) => (a[1][0].toLowerCase().startsWith(ql) ? 0 : 1) - (b[1][0].toLowerCase().startsWith(ql) ? 0 : 1) || (b[1][4] || 0) - (a[1][4] || 0)).slice(0, 12)
+      .map(([b, m]) => ({ group: "Gemeinden", icon: EB.arm("m", b, 18), label: m[0], right: `${m[1]}${m[4] ? " · " + EB.n0(m[4]) + " Einw." : ""}`, value: m[0] + "|" + m[1] }));
+  };
+  EB.dsoSource = (q) => {
+    if (!window.MUN) return [];
+    if (!EB._ops) { const o = {}; Object.values(MUN).forEach((m) => (m[2] || "").split(" | ").filter(Boolean).forEach((x) => { o[x] = o[x] || { n: 0, pop: 0 }; o[x].n++; o[x].pop += m[4] || 0; })); EB._ops = o; }
+    const ql = q.toLowerCase();
+    return Object.entries(EB._ops).filter(([k]) => k.toLowerCase().includes(ql)).sort((a, b) => b[1].pop - a[1].pop).slice(0, 12)
+      .map(([k, v]) => ({ group: "Netzbetreiber", icon: EB.logo(k, 18), label: k, right: `${v.n} Gem. · ${EB.n0(v.pop)} Einw.`, value: k }));
   };
 })();

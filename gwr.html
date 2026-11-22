@@ -5,12 +5,13 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=d8c2bd64">
+<link rel="stylesheet" href="assets/style.css?v=df32ea69">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=da919031"></script>
+<script src="data/emblems.js?v=5ff0e4fe"></script>
+<script src="assets/core.js?v=79ba7873"></script>
 </head>
 <body>
 <main class="wrap">
@@ -63,9 +64,11 @@ const anyPipe = (c, d) => GL.some(g=>g.st<3&&(!c||g.canton===c)&&(!d||g.dso.incl
 const GMUNS = [...new Set(GL.filter(g=>g.st<3).map(g=>g.munName+"|"+g.canton))].sort((a,b)=>a.localeCompare(b,"de"));
 function munOpts(){ document.getElementById("mL").innerHTML = GMUNS.filter(m=>!st.c||m.endsWith("|"+st.c)).map(m=>{const [n,k]=m.split("|"); return `<option value="${EB.esc(n)} (${k})">`;}).join(""); }
 function setMun(m){ st.m=m; const b=document.getElementById("fMx"), i=document.getElementById("fM");
-  if (m) { const [n,k]=m.split("|"); b.textContent=`${n} (${k}) ✕`; b.style.display=""; i.style.display="none"; if (st.c && st.c!==k) { EB.toast(`Kantons-Filter ${st.c} entfernt – ${n} liegt in ${k}`); st.c=""; document.getElementById("fC").value=""; munOpts(); } }
+  if (m) { const [n,k]=m.split("|"); b.innerHTML=`${EB.armMun(n,k,14)}${EB.esc(n)} (${k}) ✕`; b.style.display=""; i.style.display="none"; if (st.c && st.c!==k) { EB.toast(`Kantons-Filter ${st.c} entfernt – ${n} liegt in ${k}`); st.c=""; document.getElementById("fC").value=""; munOpts(); } }
   else { b.style.display="none"; i.style.display=""; i.value=""; }
   draw(); }
+EB.autocomplete(document.getElementById("fM"), EB.munSource(() => st.c ? [st.c] : []), (it) => setMun(it.value));
+EB.autocomplete(document.getElementById("fD"), EB.dsoSource, (it) => setDso(it.value));
 document.getElementById("fM").onchange=e=>{ const m=e.target.value.trim().match(/^(.*) \(([A-Z]{2})\)$/); if (m && GMUNS.includes(m[1]+"|"+m[2])) setMun(m[1]+"|"+m[2]); else e.target.value=""; };
 document.getElementById("fMx").onclick=()=>setMun("");
 function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemeinde-Filter ${st.m.split("|")[0]} entfernt – liegt nicht in ${c}`); st.m=""; document.getElementById("fMx").style.display="none"; const i=document.getElementById("fM"); i.style.display=""; i.value=""; }
@@ -74,7 +77,7 @@ function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemei
 function setDso(d){ const had = st.d; if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
   st.d=d; document.getElementById("fD").value=d; draw();
   // deselecting an operator returns both maps to the initial Switzerland view
-  if (had && !d) { FPFOCUS = null; fpMap.flyToBounds(EB.CH_BOUNDS, {duration:0.6}); map.flyToBounds(EB.CH_BOUNDS, {duration:0.6}); } }
+  if (had && !d) { FPFOCUS = null; fpMap._ebHome(); map._ebHome(); } }
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
 document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
@@ -158,7 +161,7 @@ function fpMapRender(fit){
     {key:0, label:"projektiert", color:gc[0], round:true}, {key:1, label:"bewilligt", color:gc[1], round:true}, {key:2, label:"im Bau", color:gc[2], round:true},
     {key:"area", label:"Netzgebiet", color:o1}].concat(sel ? [] : [{key:"bub", label:"Netzbetreiber (Kreis ∝ Anzahl)", color:EB.css("--muted"), round:true}]),
     HID_FP, () => fpMapRender(false),
-    sel && FPAREA ? `<button class="lg-link" id="fpMunList" title="Liste der Gemeinden, nach Einwohnerzahl">${FPAREA.n} Gemeinden</button>${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""} · Baustellen inkl. projektiert` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
+    sel && FPAREA ? `<button class="lg-link" id="fpMunList" title="Liste der Gemeinden, nach Anzahl Baustellen">${FPAREA.n} Gemeinden</button>${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""}` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
   const ml = document.getElementById("fpMunList"); if (ml) ml.onclick = (e) => { e.stopPropagation(); openMunList(ml); };
   if (FPFOCUS) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpFocusX" title="Zurück zum ganzen Netzgebiet">✕ Fokus: ${EB.esc(FPFOCUS.name)}</button>`); document.getElementById("fpFocusX").onclick = () => { FPFOCUS = null; fpMapRender(true); }; }
   if (sel) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>`); document.getElementById("fpClr").onclick = () => selDso(st.d); }
@@ -169,10 +172,10 @@ function openMunList(anchor){
   const rows = Object.keys(MUN).filter(b => (MUN[b][2]||"").split(" | ").includes(op)).map(b => {
     const m = MUN[b]; const n = (sel && sel.sitesAll || []).filter(g => g.bfs === +b).length;
     return {bfs:+b, name:m[0], canton:m[1], pop:m[4]||0, sites:n, shared:(m[2]||"").includes(" | ")};
-  }).sort((a,b) => b.pop - a.pop);
-  const list = rows.map((r,i) => `<div class="mw-row" data-i="${i}"><span>${EB.esc(r.name)} <span class="muted">${r.canton}</span>${r.shared ? ' <span class="badge" title="mehrere Netzbetreiber in dieser Gemeinde">geteilt</span>' : ""}</span><span class="n">${r.pop ? EB.n0(r.pop) : "–"}</span><span class="s">${r.sites ? EB.n0(r.sites) + " Baust." : "–"}</span></div>`).join("");
+  }).sort((a,b) => b.sites - a.sites || b.pop - a.pop);
+  const list = rows.map((r,i) => `<div class="mw-row" data-i="${i}"><span class="nm">${EB.arm("m", r.bfs, 18)}${EB.esc(r.name)}&nbsp;<span class="muted">${r.canton}</span>${r.shared ? ' <span class="badge" title="mehrere Netzbetreiber in dieser Gemeinde">geteilt</span>' : ""}</span><span class="n">${r.pop ? EB.n0(r.pop) : "–"}</span><span class="s">${r.sites ? EB.n0(r.sites) + " Baust." : "–"}</span></div>`).join("");
   const head = `<div class="pc-top"><span class="pc-status" style="--c:${ORANGE()[0]}">Netzgebiet</span><span class="pc-id">${rows.length} Gemeinden</span></div>
-    <div class="pc-title">${EB.esc(op)}</div><div class="pc-sub">Sortiert nach ständiger Wohnbevölkerung 2025 (BFS STATPOP)</div>`;
+    <div class="pc-title">${EB.logo(op, 20)}${EB.esc(op)}</div><div class="pc-sub">Sortiert nach Anzahl Baustellen · Einwohner 2025 (BFS STATPOP)</div>`;
   const win = EB.showPop(anchor, `${head}<div id="mwAsk"></div><div class="mw-head"><span>Gemeinde</span><span>Einwohner</span><span>Baustellen</span></div><div class="mw-list">${list}</div>`, "munwin");
   win.querySelectorAll(".mw-row").forEach(r => r.onclick = () => {
     const x = rows[+r.dataset.i], ask = win.querySelector("#mwAsk");
