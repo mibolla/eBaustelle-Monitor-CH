@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="assets/style.css?v=2d5006db">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="data/validation.js?v=71f753ea"></script>
-<script src="assets/core.js?v=f0c9d602"></script>
+<script src="data/emblems.js?v=effcb6f0"></script>
+<script src="assets/core.js?v=b014d10a"></script>
 </head>
 <body>
 <main class="wrap">
@@ -161,7 +162,7 @@ EB.chart("cCov",{type:"bar",data:{labels:by,datasets:[EB.bar({label:"Abdeckung",
 const cc = EB.CANTONS.map(c=>{ const b=pub(c); if(!b) return [c,null]; let s=0,t=0; for(const y of by.slice(0,8)){ s+=V.sim_canton.filter(x=>x.year===y&&x.canton===c).reduce((a,x)=>a+x.value,0); t+=(b.v[y]||0)*1000; } return [c,t?100*s/t:null]; }).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);
 EB.chart("cCovC",{type:"bar",data:{labels:cc.map(c=>c[0]),datasets:[EB.bar({label:"Abdeckung",backgroundColor:EB.css("--s1"),data:cc.map(c=>c[1])})]},
   options:{onClick:(e,els)=>{ if(!els.length) return; EB.filters.cantons=[cc[els[0].index][0]]; EB.saveFilters(); location.href="index.html"; },
-    scales:{x:EB.axisPlain,y:{ticks:{callback:v=>v+" %"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n1(c.raw)} %`,footer:()=>"Klick: Übersicht für diesen Kanton"}}}}});
+    scales:{x:EB.axisPlain,y:{ticks:{callback:v=>v+" %"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{ebArms:{on:true},legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n1(c.raw)} %`,footer:()=>"Klick: Übersicht für diesen Kanton"}}}}});
 document.getElementById("valTbl").innerHTML = `<thead><tr><th>Jahr</th><th class="num">simap Zuschläge Bau</th><th class="num">Anzahl</th><th class="num">BFS Bauausgaben öffentlich</th><th class="num">BFS Bauausgaben total</th><th class="num">Abdeckung öff.</th></tr></thead><tbody>`+
   by.map((y,i)=>`<tr><td>${y}</td><td class="num">${EB.chf(simY(y))}</td><td class="num">${EB.n0(V.sim.filter(s=>s.year===y&&s.ctype==="construction").reduce((a,s)=>a+s.cnt,0))}</td><td class="num">${EB.chf(ch.v[y]*1000)}</td><td class="num">${EB.chf(cht.v[y]*1000)}</td><td class="num">${EB.n1(cov[i])} %</td></tr>`).join("")+
   `<tr><td>2025</td><td class="num">${EB.chf(simY(2025))}</td><td class="num">${EB.n0(V.sim.filter(s=>s.year===2025&&s.ctype==="construction").reduce((a,s)=>a+s.cnt,0))}</td><td class="num muted" colspan="3">BFS-Werte noch nicht publiziert</td></tr></tbody>`;

@@ -307,8 +307,24 @@
         else { const x = ch.scales.x, w = (x.right - x.left) / n, cx = x.getPixelForValue(idx), a = ch.chartArea; (g.roundRect ? g.roundRect(cx - w / 2, a.top - 4, w, ch.height - a.top, 5) : g.rect(cx - w / 2, a.top - 4, w, ch.height - a.top)); }
         g.fill(); g.restore();
       };
-      band(o.index, o.color || "rgba(235,104,52,.14)");          // selected: stays
-      if (o.hover !== o.index) band(o.hover, o.hoverColor || "rgba(235,104,52,.08)");   // hovered: lighter
+      band(o.index, o.color || "rgba(235,104,52,.16)");          // selected: stays
+      if (o.hover !== o.index) band(o.hover, o.hoverColor || "rgba(235,104,52,.09)");   // hovered: lighter
+    } }); }
+    // canton arms on the category axis: options.plugins.ebArms = { on: true }
+    if (!EB._armsReg) { EB._armsReg = true; C.register({ id: "ebArms", afterDraw(ch, args, o) {
+      if (!o || !o.on || !window.EMBLEMS) return;
+      const horiz = ch.options.indexAxis === "y", ax = horiz ? ch.scales.y : ch.scales.x; if (!ax) return;
+      const g = ch.ctx, H = 15;
+      ch.data.labels.forEach((code, i) => {
+        const a = EMBLEMS.arms.c[code]; if (!a) return;
+        EB._armImg = EB._armImg || {};
+        let img = EB._armImg[code];
+        if (!img) { img = EB._armImg[code] = new Image(); img.onload = () => Object.values(EB.charts).forEach((x) => x.options.plugins && x.options.plugins.ebArms && x.draw()); img.src = a[0]; }
+        if (!img.complete || !img.naturalWidth) return;
+        const w = H * img.naturalWidth / img.naturalHeight, p = ax.getPixelForTick(i);
+        if (horiz) g.drawImage(img, ax.right - w - 4, p - H / 2, w, H);
+        else g.drawImage(img, p - w / 2, ax.top + 3, w, H);
+      });
     } }); }
     if (!EB._emptyReg) { EB._emptyReg = true; C.register({ id: "ebEmpty", afterDraw(ch) {
       const any = ch.data.datasets.some((d) => !d.hidden && (d.data || []).some((v) => (typeof v === "object" && v ? v.y || v.x : v)));
@@ -353,8 +369,13 @@
     el.style.left = x + "px"; el.style.top = y + "px"; el.style.opacity = 1;
   };
   EB.chart = function (id, cfg) {
-    if (EB.charts[id]) { EB.charts[id].destroy(); const t = document.getElementById("ctip"); if (t) t.style.opacity = 0; }
+    const prev = EB.charts[id];
     const el = document.getElementById(id); if (!el || !window.Chart) return;
+    if (cfg.options && cfg.options.plugins && cfg.options.plugins.ebArms && cfg.options.plugins.ebArms.on) {
+      const axn = cfg.options.indexAxis === "y" ? "y" : "x";
+      cfg.options.scales = cfg.options.scales || {}; cfg.options.scales[axn] = Object.assign({}, cfg.options.scales[axn]);
+      cfg.options.scales[axn].ticks = Object.assign({}, cfg.options.scales[axn].ticks, { padding: axn === "x" ? 21 : 24 });
+    }
     // horizontal bars: resolve hover/click along the category axis (y), so highlight, tooltip and click hit the same row
     if (cfg.options && cfg.options.indexAxis === "y") {
       cfg.options.interaction = Object.assign({ mode: "index", intersect: false }, cfg.options.interaction, { axis: "y" });
@@ -373,6 +394,17 @@
       };
       if (!cfg.options.onHover) cfg.options.onHover = (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; };
     }
+    // update an existing chart in place instead of destroying it: no blank canvas, no stale hover state
+    if (prev && prev.canvas === el && prev.config.type === cfg.type) {
+      prev.config.data = cfg.data;
+      prev.config.options = cfg.options;
+      prev.setActiveElements([]);
+      prev.tooltip && prev.tooltip.setActiveElements([], { x: 0, y: 0 });
+      const t = document.getElementById("ctip"); if (t) t.style.opacity = 0;
+      prev.update(cfg.options && cfg.options.animation === false ? "none" : undefined);
+      return prev;
+    }
+    if (prev) prev.destroy();
     EB.charts[id] = new Chart(el, cfg);
     return EB.charts[id];
   };

@@ -10,8 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="data/emblems.js?v=5ff0e4fe"></script>
-<script src="assets/core.js?v=f0c9d602"></script>
+<script src="data/emblems.js?v=effcb6f0"></script>
+<script src="assets/core.js?v=b014d10a"></script>
 </head>
 <body>
 <main class="wrap">
@@ -95,11 +95,19 @@ function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemei
   const had = st.c;
   st.c=c; document.getElementById("fC").value=c; munOpts(); draw();
   drawCantonSel(!!c);
+  fpCantonView(true);
   if (had && !c && !st.d) { map._ebHome(); fpMap._ebHome(); } }
+/* flex-pool map follows the canton selection: thin canton outline, zoom to the canton (an operator selection takes precedence) */
+function fpCantonView(fit){
+  fpCanton.clearLayers();
+  if (!st.c) return;
+  const a = EB.drawArea(fpMap, fpCanton, EB.cantonArea(st.c), {noFill:true, weight:1.5, dash:"4 4", color:EB.css("--text-2")});
+  if (fit && a && !st.d) fpMap.fitBounds(L.latLngBounds(a.lines.flat()).pad(0.06), {maxZoom:12});
+}
 function setDso(d){ const had = st.d; if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
   st.d=d; document.getElementById("fD").value=d; draw();
   // deselecting an operator returns both maps to the initial Switzerland view
-  if (had && !d) { FPFOCUS = null; fpMap._ebHome(); map._ebHome(); } }
+  if (had && !d) { FPFOCUS = null; if (st.c) { fpCantonView(true); drawCantonSel(true); } else { fpMap._ebHome(); map._ebHome(); } } }
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
 document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
@@ -131,7 +139,7 @@ function draw(){
   EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
     options:{scales:{x:Object.assign({stacked:true},EB.axisPlain,{ticks:{autoSkip:false,maxRotation:0,minRotation:0,font:{size:10.5}}}),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; setCanton(st.c===c?"":c); },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; canHover(els.length ? cans[els[0].index][0] : null); },
-    plugins:{ebRow:{index:cans.findIndex(c=>c[0]===st.c),hover:-1},legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
+    plugins:{ebArms:{on:true},ebRow:{index:cans.findIndex(c=>c[0]===st.c),hover:canHot?cans.findIndex(c=>c[0]===canHot):-1},legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
         labels:{generateLabels:()=>[0,1,2].map(s=>({text:G.status[s],datasetIndex:s,fillStyle:EB.dim(gc[s],st.sel.includes(s)),strokeStyle:"transparent",borderRadius:3,
           fontColor:st.sel.includes(s)?EB.css("--text-2"):EB.css("--muted")}))}},
       tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)}${st.sel.includes(c.datasetIndex)?"":" (abgewählt)"}`,footer:()=>"Klick: Kanton wählen und hinzoomen"}}}}});
@@ -157,7 +165,7 @@ function draw(){
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
+const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpCanton = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
@@ -268,7 +276,7 @@ function fpHover(op, from){
   if (op && FPM[op]) {
     FPM[op].mk.setStyle({fillColor:o1, fillOpacity:0.85, color:EB.css("--surface"), weight:2.5}).bringToFront();
     if (from === "chart") FPM[op].mk.openTooltip();
-    fpSites.setPoints(fpSitePts(FPM[op].o, o1));
+    fpSites.setPoints([]);   // no selection yet: only operator circles (+ network outline), no single building points
   } else fpSites.setPoints([]);
 }
 document.getElementById("cFP").addEventListener("mouseleave", ()=>fpHover(null,"chart"));
@@ -292,7 +300,7 @@ function drawFlex(){
   Object.values(acc).forEach(o=>o.sitesAll = all[o.op]);
   FP = Object.values(acc).sort((a,b)=>b.n-a.n);
   const top = FP.slice();   // all operators, scrollable list
-  document.getElementById("fpInner").style.height = Math.max(560, top.length * 21 + 36) + "px";
+  document.getElementById("fpInner").style.height = (top.length * 22 + 40) + "px";   // fixed row spacing from the top
   document.getElementById("fpN").textContent = `${EB.n0(top.length)} Netzbetreiber`;
   document.getElementById("fpL").innerHTML = `<span><span class="swatch" style="background:#1c5cab"></span>gross (≥ ${EB.n0(big)} m²)</span><span><span class="swatch" style="background:#86b6ef"></span>mittel (${EB.n0(mn)}–${EB.n0(big)} m²)</span>`;
   const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op;

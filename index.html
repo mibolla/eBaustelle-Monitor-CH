@@ -10,8 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="data/emblems.js?v=5ff0e4fe"></script><script src="data/municipalities.js?v=7dfecca4"></script>
-<script src="assets/core.js?v=f0c9d602"></script>
+<script src="data/emblems.js?v=effcb6f0"></script><script src="data/municipalities.js?v=7dfecca4"></script>
+<script src="assets/core.js?v=b014d10a"></script>
 </head>
 <body>
 <main class="wrap">
@@ -102,7 +102,7 @@ function draw(){
   [...f.cantons,...munC].forEach(c=>{ if(!cs.find(x=>x[0]===c)) cs.push([c,byC[c]||0]); });
   EB.chart("cCanton",{type:"bar",data:{labels:cs.map(c=>c[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:cs.map(c=>c[1]),
       backgroundColor:cs.map(c=>EB.dim(EB.css("--s1"),(!f.cantons.length&&!munC.size)||f.cantons.includes(c[0])||munC.has(c[0])))})]},
-    options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Kanton filtern"}}},
+    options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{ebArms:{on:true},legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Kanton filtern"}}},
       onClick:(e,els)=>{ if(!els.length) return; const c=cs[els[0].index][0];
         if (f.dso && !f.cantons.includes(c) && !P.some(p=>p.canton===c&&(p.dsoName||"").includes(f.dso))) { EB.toast(`Versorger-Filter «${f.dso}» entfernt – keine Projekte dieses Netzbetreibers in ${c}`); f.dso=""; }
         if (f.muns.length && f.muns.some(m=>m.split("|")[1]!==c) && !f.cantons.includes(c)) { EB.toast("Gemeinde-Filter entfernt – Auswahl liegt nicht in "+c); f.muns=[]; }
