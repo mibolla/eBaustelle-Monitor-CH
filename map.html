@@ -5,12 +5,13 @@
 <title>Karte · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=119360b2">
+<link rel="stylesheet" href="assets/style.css?v=38f283f4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script><script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
-<script src="assets/core.js?v=31fb9f35"></script>
+<script src="data/gwrlinks.js?v=caee8348"></script>
+<script src="assets/core.js?v=6ad0a412"></script>
 </head>
 <body>
 <main class="wrap">
@@ -45,7 +46,7 @@ function draw(){
   const pts = F.filter(p=>p.lat&&p.geo<=2&&!HID_T.has(p.type)).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:tc[p.type],r:p.value?Math.max(2.5,Math.min(16,Math.sqrt(p.value/1e6)*1.7)):2.5,p}));
   projLayer.setPoints(document.getElementById("lP").checked?pts:[]);
   const cs = EB.filters.cantons, done = document.getElementById("lDone").checked;
-  const gp = document.getElementById("lG").checked ? GL.filter(g=>(g.st<3||done)&&!HID_G.has(g.st)&&(!cs.length||cs.includes(g.canton))).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),alpha:.8,g})) : [];
+  const gp = document.getElementById("lG").checked ? GL.filter(g=>(g.st<3||done)&&!HID_G.has(g.st)&&(!cs.length||cs.includes(g.canton))).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),alpha:.8,ring:!!(window.GWRLINKS&&GWRLINKS[g.egid]),g})) : [];
   gwrLayer.setPoints(gp);
   if (document.getElementById("lW").checked) wms.addTo(map); else wms.remove();
   EB.mapLegend(document.getElementById("legP"), window.PROJ.types.map((t,k)=>({key:k,label:t,color:tc[k]})), HID_T, draw);

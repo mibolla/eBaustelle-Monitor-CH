@@ -5,13 +5,14 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=119360b2">
+<link rel="stylesheet" href="assets/style.css?v=38f283f4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
-<script src="assets/core.js?v=31fb9f35"></script>
+<script src="data/gwrlinks.js?v=caee8348"></script>
+<script src="assets/core.js?v=6ad0a412"></script>
 </head>
 <body>
 <main class="wrap">
@@ -20,6 +21,7 @@
   <div class="filters">
     <div class="fgroup"><span class="flabel">Kanton</span><select id="fC"><option value="">alle</option></select></div>
     <div class="fgroup"><span class="flabel">Gemeinde</span><input type="text" id="fM" list="mL" placeholder="Gemeinde…" style="width:170px"><datalist id="mL"></datalist><button class="chip on" id="fMx" style="display:none"></button></div>
+    <div class="fgroup"><span class="flabel">simap</span><span id="fSim"></span></div>
     <div class="fgroup"><span class="flabel">Status</span><span id="fS"></span></div>
     <div class="fgroup"><span class="flabel">Gebäudegrösse</span><select id="fZ"><option value="0">alle</option><option value="500">≥ 500 m² Geschossfl.</option><option value="1500">≥ 1500 m²</option><option value="5000">≥ 5000 m²</option></select></div>
     <div class="fgroup"><span class="flabel">Versorger</span><input type="text" id="fD" list="dL" placeholder="Netzbetreiber…" style="width:200px"><datalist id="dL"></datalist></div>
@@ -61,7 +63,7 @@ EB.shell("gwr.html"); EB.chartDefaults();
 ["i1","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
 const G = window.GWR, GC = G.cols, MUN = window.MUN;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
-const st = { sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
+const st = { sim:"", sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
 /* canton hover / selection on the main map: orange boundary like the grid-operator areas */
 let CANS = [], canHot = null;
 const canSel = L.layerGroup(), canHov = L.layerGroup();
@@ -111,6 +113,9 @@ function setDso(d){ const had = st.d; if (d && st.c && !anyPipe(st.c, d)) { EB.t
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
 document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
+function simChips(){ const n = window.GWRLINKS ? Object.keys(GWRLINKS).length : 0;
+  document.getElementById("fSim").innerHTML = [["","alle"],["mit",`mit Ausschreibung (${EB.n0(n)})`],["ohne","ohne"]].map(([k,l])=>`<button class="chip ${st.sim===k?"on":""}" data-sim="${k}">${l}</button>`).join("");
+  document.querySelectorAll("[data-sim]").forEach(b=>b.onclick=()=>{ st.sim=b.dataset.sim; simChips(); draw(); }); }
 function chips(){ document.getElementById("fS").innerHTML = G.status.slice(0,3).map((s,i)=>`<button class="chip ${st.sel.includes(i)?"on":""}" data-i="${i}">${s}</button>`).join("");
   document.querySelectorAll("#fS [data-i]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; st.sel = st.sel.includes(i)?st.sel.filter(x=>x!==i):[...st.sel,i]; chips(); draw(); }); }
 document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
@@ -122,7 +127,8 @@ function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
   const inBin = (g,i) => i===5 ? !g.fa : g.fa>=bins[i][0]&&g.fa<bins[i][1];
-  const pass = (g, skip, allSt) => g.st<3&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.m||g.munName+"|"+g.canton===st.m)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
+  const linked = (g) => !!(window.GWRLINKS && GWRLINKS[g.egid]);
+  const pass = (g, skip, allSt) => g.st<3&&(!st.sim||(st.sim==="mit")===linked(g))&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.m||g.munName+"|"+g.canton===st.m)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
   const pipe = GL.filter(g=>pass(g));
   const pipeC = GL.filter(g=>pass(g,"c",true)), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
   const tag = [st.cls!=null?"Kategorie: "+G.classes[st.cls]:"", st.sb!=null?"Grösse: "+(bins[st.sb]||[0,0,"unbekannt"])[2]:""].filter(Boolean);
@@ -154,8 +160,8 @@ function draw(){
   EB.chart("cSize",{type:"bar",data:{labels:bins.map(b=>b[2]).concat(["unbekannt"]),datasets:[EB.bar({label:"Gebäude",backgroundColor:["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")].map((c,i)=>EB.dim(c,st.sb==null||st.sb===i)),data:[0,1,2,3,4,5].map(i=>pipeS.filter(g=>inBin(g,i)).length)})]},
     options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const i=els[0].index; st.sb = st.sb===i?null:i; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Grösse filtern"}}}}});
   drawFlex();
-  layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),g})));
-  EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, "offizieller GWR-Layer ab Zoom 15"); document.getElementById("leg").insertAdjacentHTML("beforeend", EB.sizeLegend());
+  layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),ring:!!(window.GWRLINKS&&GWRLINKS[g.egid]),g})));
+  EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, `<span class="ringkey"></span>mit simap-Ausschreibung · offizieller GWR-Layer ab Zoom 15`); document.getElementById("leg").insertAdjacentHTML("beforeend", EB.sizeLegend());
   const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
@@ -248,7 +254,7 @@ function openMunList(anchor){
     ask.querySelector("#mwNo").onclick = (e) => { e.preventDefault(); ask.innerHTML = ""; r.style.background = ""; };
   });
 }
-function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:EB.faR(x.fa),alpha:.9,g:x})); }
+function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:EB.faR(x.fa),alpha:.9,ring:!!(window.GWRLINKS&&GWRLINKS[x.egid]),g:x})); }
 function fpHover(op, from){
   if (op === fpHot) return;
   const prev = fpHot; fpHot = op;
@@ -334,7 +340,7 @@ document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
 document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
 document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrInfo(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
-munOpts(); chips(); draw(); fpAlign(); setTimeout(fpAlign, 300); document.addEventListener("eb-redraw", draw);
+munOpts(); simChips(); chips(); draw(); fpAlign(); setTimeout(fpAlign, 300); document.addEventListener("eb-redraw", draw);
 </script>
 </body>
 </html>

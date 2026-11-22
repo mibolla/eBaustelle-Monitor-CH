@@ -92,7 +92,7 @@
     c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
     c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
     c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo", "bfsPop"] },
-    c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
+    c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten. <b>simap-Verknüpfung</b> (Ring um den Punkt, Filter «simap»): <i>sicher</i> = gleiche Adresse (Strasse + Nr.) in Ausschreibung und GWR; <i>Parzelle</i> = Parzellen-Nr. bzw. EGRID aus der Ausschreibung in derselben Gemeinde (EGID kommt in simap-Texten nicht vor); <i>wahrscheinlich</i> = Strassenname im Titel/Ausführungsort, ohne Tief-/Leitungsbau; <i>möglich</i> = gleiche Gemeinde und passender öffentlicher Gebäudetyp (Schule, Spital, Sporthalle …), max. 2 Kandidaten. Nur «sicher» und «Parzelle» sind belastbar; die übrigen Stufen sind Hinweise zur Prüfung.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
     c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
     c_month: { t: "Publikationen pro Monat und Quelle", b: "Kontrolle auf Lücken und Brüche. Archiv: alle Publikationen inkl. Ausschreibungen. Neue Plattform: neueste Publikation je Projekt (plus Lose) – deshalb weniger Ausschreibungen nach 7/2024.", s: ["simapNew", "simapArch"] },
     c_geo: { t: "Geokodierungs-Genauigkeit", b: "GWR-Adresse: Strasse+Nr. im Titel/Ort gefunden und im GWR-Eingangsregister gematcht. PLZ: Postleitzahl des Ausführungsorts. Gemeinde: Gemeinde-/Ortsname im Ort oder Titel. Vergabestelle: Rückfall auf Adresse der Vergabestelle (unsicher).", s: ["gwr", "methods"] },
@@ -457,7 +457,8 @@
           const r = (p.r || 3) * zs;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, 6.2832);
           ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha || 0.75; ctx.fill();
-          if (r >= 4) { ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeStyle = ring; ctx.stroke(); }
+          if (p.ring) { ctx.globalAlpha = 1; ctx.lineWidth = 1.6; ctx.strokeStyle = EB.css("--text"); ctx.beginPath(); ctx.arc(pt.x, pt.y, r + 1.8, 0, 6.2832); ctx.stroke(); }
+          else if (r >= 4) { ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeStyle = ring; ctx.stroke(); }
           this._scr.push([pt.x, pt.y, Math.max(r, 5), p]);
           if (sel && p === sel) { ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(pt.x, pt.y, r + 4, 0, 6.2832); ctx.lineWidth = 2.5; ctx.strokeStyle = EB.css("--text"); ctx.stroke(); }
         }
@@ -624,6 +625,7 @@
       <div class="pc-sub">${EB.armMun(g.munName, g.canton, 14)}${EB.esc(g.munName || "")} ${EB.arm("c", g.canton, 13)}${EB.esc(g.canton || "")}</div>
       <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
         ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", g.dso ? EB.entList("dso", g.dso, "<br>") : "")}</dl>
+      ${EB.simapLinks(g.egid)}
       <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Karte", EB.lnk.gwrObj(g.egid))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
       <div class="pc-src">Quelle: BFS, Gebäude- und Wohnungsregister</div></div>`;
   };
@@ -973,5 +975,17 @@
     const W = colW * vals.length;
     return `<span class="sizeleg" title="Kreisfläche proportional zur Geschossfläche (eine Skala für alle Bauphasen)"><span class="muted">Geschossfläche</span>
       <svg width="${W}" height="${base + 15}" viewBox="0 0 ${W} ${base + 15}" aria-label="Grössenlegende Geschossfläche">${body}</svg></span>`;
+  };
+
+  /* simap links of a GWR building (scripts/09_link_gwr_simap.py) */
+  EB.LINK_LVL = { "sicher": ["gleiche Adresse", "var(--good)"], "Parzelle": ["gleiche Parzelle", "var(--good)"], "wahrscheinlich": ["Strasse im Titel", "var(--warning)"], "möglich": ["Gemeinde + Gebäudetyp", "var(--muted)"] };
+  EB.simapLinks = function (egid) {
+    if (!window.GWRLINKS) return "";
+    const L = GWRLINKS[String(egid)];
+    if (!L) return `<div class="pc-simap none">simap: kein Eintrag gefunden</div>`;
+    return `<div class="pc-simap"><div class="ps-h">simap-Ausschreibungen (${L.length})</div>` + L.map(([pid, lvl, t, y, v, u]) =>
+      `<div class="ps-row"><span class="ps-l" style="--c:${EB.LINK_LVL[lvl][1]}" title="Verknüpfung: ${EB.LINK_LVL[lvl][0]}">${lvl}</span>
+        <span class="ps-t"><a href="${EB.lnk.proj(pid)}">${EB.esc(t)}</a><span class="muted"> · ${y}${v ? " · " + EB.chf(v) : ""}</span></span>
+        <a class="ps-x" href="${u}" target="_blank" rel="noopener" title="Auf simap öffnen">simap ↗</a></div>`).join("") + `</div>`;
   };
 })();
