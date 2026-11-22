@@ -5,7 +5,7 @@
   --accent:#2a78d6; --accent-soft:#e3eefb;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
   --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
-  --gwr-proj:#2a78d6; --gwr-bew:#d55181; --gwr-bau:#eb6834; --gwr-done:#0ca30c;
+  --gwr-proj:#2a78d6; --gwr-bew:#1c5cab; --gwr-bau:#0d366b; --gwr-done:#0ca30c;   /* status: ordinal blue ramp (validated); orange is reserved for selection */
   --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04);
   --r:10px;
 }
@@ -249,3 +249,6 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 .fp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .fp-head input{width:190px;margin-left:auto}
 .fp-scroll{height:560px;overflow-y:auto;overflow-x:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);scrollbar-width:thin}
+/* GWR status ramp in dark mode: later stage = brighter on the dark surface */
+:root[data-theme="dark"]{--gwr-proj:#3987e5;--gwr-bew:#6da7ec;--gwr-bau:#b7d3f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--gwr-proj:#3987e5;--gwr-bew:#6da7ec;--gwr-bau:#b7d3f6}}

@@ -802,8 +802,8 @@
     if (!map.getPane("opArea")) { map.createPane("opArea"); map.getPane("opArea").style.zIndex = 390; }
     const col = (o && o.color) || EB.css("--s2");
     const rnd = L.svg({ pane: "opArea" });
-    L.polygon(a.polys, { pane: "opArea", renderer: rnd, stroke: false, fillColor: col, fillOpacity: (o && o.fill) || 0.13, interactive: false }).addTo(group);
-    L.polyline(a.lines, { pane: "opArea", renderer: rnd, color: col, weight: (o && o.weight) || 2.5, opacity: 0.95, lineJoin: "round", interactive: false }).addTo(group);
+    if (!(o && o.noFill)) L.polygon(a.polys, { pane: "opArea", renderer: rnd, stroke: false, fillColor: col, fillOpacity: (o && o.fill) || 0.13, interactive: false }).addTo(group);
+    L.polyline(a.lines, { pane: "opArea", renderer: rnd, color: col, weight: (o && o.weight) || 2.5, opacity: 0.95, lineJoin: "round", dashArray: (o && o.dash) || null, interactive: false }).addTo(group);
     return a;
   };
 })();

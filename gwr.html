@@ -5,12 +5,12 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=9efd4d6d">
+<link rel="stylesheet" href="assets/style.css?v=22617f89">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=30b97621"></script>
+<script src="assets/core.js?v=a259f8c9"></script>
 </head>
 <body>
 <main class="wrap">
@@ -34,7 +34,7 @@
       <span class="hint" style="margin-left:0">Klick auf Balken oder Kreis = Netzbetreiber filtern</span>
       <span style="margin-left:auto" class="fgroup"><span class="flabel">mittel ab</span><select id="fpMin"><option value="500">500 m²</option><option value="1000">1'000 m²</option><option value="1500">1'500 m²</option></select>
       <span class="flabel">gross ab</span><select id="fpBig"><option value="5000">5'000 m²</option><option value="10000">10'000 m²</option></select>
-      <label class="toggle"><input type="checkbox" id="fpProj">inkl. projektiert</label><span id="mbFP"></span></span></div>
+      <span id="mbFP"></span></span></div>
     <p class="small muted" style="margin:-4px 0 10px">Für einen Versorger ist eine einzelne Baustelle Rauschen; alle Baustellen in seinem Netzgebiet bilden einen Pool temporärer Lasten. Gezählt: bewilligte und im Bau befindliche mittlere und grosse Gebäude (GWR) je Verteilnetzbetreiber (ElCom 2026; bei mehreren Betreibern pro Gemeinde der erstgenannte).</p>
     <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)" id="fpLay">
       <div>
@@ -128,36 +128,61 @@ function draw(){
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
-["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
+const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
+["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
+let FPSEL = null;
+function fpMapRender(fit){
+  const sel = FPSEL, gc = gcol(), [o1] = ORANGE();
+  if (HID_FP.has("bub")) fpLayer.remove(); else fpLayer.addTo(fpMap);
+  fpHoverArea.clearLayers();
+  fpSites.setPoints(sel ? fpSitePts(sel) : []);
+  const area = HID_FP.has("area") ? (fpArea.clearLayers(), null) : EB.drawOpArea(fpMap, fpArea, st.d || null); FPAREA = area || (st.d ? EB.opArea(st.d) : null);
+  if (fit && sel) { const b = FPAREA ? L.latLngBounds(FPAREA.lines.flat()) : L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])); fpMap.fitBounds(b.pad(0.08), {maxZoom:13}); }
+  if (sel && FPM[st.d] && !HID_FP.has("bub")) FPM[st.d].mk.bringToFront();
+  const el = document.getElementById("fpLeg");
+  EB.mapLegend(el, [
+    {key:0, label:"projektiert", color:gc[0], round:true}, {key:1, label:"bewilligt", color:gc[1], round:true}, {key:2, label:"im Bau", color:gc[2], round:true},
+    {key:"area", label:"Netzgebiet", color:o1}, {key:"bub", label:"Netzbetreiber (Kreis ∝ Anzahl)", color:EB.css("--muted"), round:true}],
+    HID_FP, () => fpMapRender(false),
+    sel && FPAREA ? `${FPAREA.n} Gemeinden${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""} · Baustellen inkl. projektiert` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
+  if (sel) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>`); document.getElementById("fpClr").onclick = () => selDso(st.d); }
+}
+function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:x.fa>=FPBIG?6:3.5,alpha:.9,g:x})); }
 function fpHover(op, from){
   if (op === fpHot) return;
   const prev = fpHot; fpHot = op;
   if (prev && FPM[prev]) { FPM[prev].mk.setStyle(FPM[prev].style); FPM[prev].mk.closeTooltip(); }
   const ch = EB.charts.cFP;
   if (ch) {
-    const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op, [o1,o2] = ORANGE();
+    const c1 = "#86b6ef", c2 = "#1c5cab", [o1,o2] = ORANGE();
     const b0 = FPTOP.map(o => o.op===op || st.d===o.op ? o1 : c2), b1 = FPTOP.map(o => o.op===op || st.d===o.op ? o2 : c1);
     ch.data.datasets[0].backgroundColor = ch.data.datasets[0].hoverBackgroundColor = b0;
     ch.data.datasets[1].backgroundColor = ch.data.datasets[1].hoverBackgroundColor = b1;
-    // drop Chart.js' own hovered-bar state unless the mouse is on this very row of the chart
     if (from !== "chart" || !op) ch.setActiveElements([]);
     if (from === "map") { const i = FPTOP.findIndex(o=>o.op===op); if (i>=0) { ch.tooltip.setActiveElements([{datasetIndex:0,index:i},{datasetIndex:1,index:i}], {x:0,y:0}); } else ch.tooltip.setActiveElements([], {x:0,y:0}); }
     if (!op) ch.tooltip.setActiveElements([], {x:0,y:0});
     ch.update("none");
   }
-  const sel = st.d && FPM[st.d];
-  EB.drawOpArea(fpMap, fpArea, op || st.d || null);
+  const [o1, o2] = ORANGE();
+  if (st.d) {
+    // a selection exists: it stays on the map (area, sites, bubble); the hovered operator only gets a light highlight + dashed outline
+    if (op && op !== st.d && FPM[op]) {
+      FPM[op].mk.setStyle({fillColor:o2, fillOpacity:0.8, color:EB.css("--surface"), weight:2}).bringToFront();
+      if (from === "chart") FPM[op].mk.openTooltip();
+      if (!HID_FP.has("area")) EB.drawOpArea(fpMap, fpHoverArea, op, {noFill:true, weight:2, dash:"5 4", color:o1}); else fpHoverArea.clearLayers();
+    } else fpHoverArea.clearLayers();
+    return;
+  }
+  fpHoverArea.clearLayers();
+  if (!HID_FP.has("area")) EB.drawOpArea(fpMap, fpArea, op || null); else fpArea.clearLayers();
   if (op && FPM[op]) {
-    const [o1] = ORANGE();
     FPM[op].mk.setStyle({fillColor:o1, fillOpacity:0.85, color:EB.css("--surface"), weight:2.5}).bringToFront();
     if (from === "chart") FPM[op].mk.openTooltip();
-    if (!sel || st.d !== op) fpSites.setPoints(FPM[op].o.sites.map(g=>({lat:g.lat,lon:g.lon,color:o1,r:g.fa>=FPBIG?5:2.5,alpha:.9,g})));
-  } else if (!sel) fpSites.setPoints([]);
-  else fpSites.setPoints(FPM[st.d].o.sites.map(g=>({lat:g.lat,lon:g.lon,color:gcol()[g.st],r:g.fa>=FPBIG?6:3.5,g})));
+    fpSites.setPoints(fpSitePts(FPM[op].o, o1));
+  } else fpSites.setPoints([]);
 }
 document.getElementById("cFP").addEventListener("mouseleave", ()=>fpHover(null,"chart"));
 function fpScrollTo(op){ const ch = EB.charts.cFP, i = FPTOP.findIndex(o=>o.op===op); if (!ch || i < 0) return;
@@ -171,10 +196,13 @@ document.getElementById("fpQ").addEventListener("keydown", (e) => { if (e.key ==
 document.getElementById("fpScroll").addEventListener("scroll", () => { const t = document.getElementById("ctip"); if (t) t.style.opacity = 0; });
 const selDso = (d) => setDso(st.d===d ? "" : d);
 function drawFlex(){
-  const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value, inclP = document.getElementById("fpProj").checked;
-  const acc = {};
-  GL.forEach(g=>{ if (g.st>2 || (g.st===0&&!inclP) || !(g.fa>=mn) || (st.c&&g.canton!==st.c) || (st.m&&g.munName+"|"+g.canton!==st.m)) return; const op=(g.dso||"").split(" | ")[0]; if(!op) return;
+  const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value;
+  const acc = {}, all = {};
+  GL.forEach(g=>{ if (g.st>2 || !(g.fa>=mn) || (st.c&&g.canton!==st.c) || (st.m&&g.munName+"|"+g.canton!==st.m)) return; const op=(g.dso||"").split(" | ")[0]; if(!op) return;
+    (all[op] = all[op] || []).push(g);              // map: projected + approved + under construction
+    if (g.st === 0) return;                          // pool count: approved + under construction
     const o = acc[op] = acc[op] || {op, n:0, big:0, lat:0, lon:0, fa:0, sites:[]}; o.n++; if (g.fa>=big) o.big++; o.lat+=g.lat; o.lon+=g.lon; o.fa+=g.fa; o.sites.push(g); });
+  Object.values(acc).forEach(o=>o.sitesAll = all[o.op]);
   FP = Object.values(acc).sort((a,b)=>b.n-a.n);
   const top = FP.slice();   // all operators, scrollable list
   document.getElementById("fpInner").style.height = Math.max(560, top.length * 21 + 36) + "px";
@@ -192,22 +220,15 @@ function drawFlex(){
   if (st.d) fpScrollTo(st.d);
   const maxN = FP.length ? FP[0].n : 1, gc = gcol();
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
-    const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:c2,fillOpacity:st.d?0.3:0.55};
+    const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:EB.css("--muted"),fillOpacity:st.d?0.25:0.45};
     const mk = L.circleMarker([o.lat/o.n,o.lon/o.n],style)
       .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
       .on("mouseover",()=>fpHover(o.op,"map")).on("mouseout",()=>fpHover(null,"map")).addTo(fpLayer);
     FPM[o.op] = {mk, style, o}; });
-  const sel = st.d && acc[st.d];
-  fpSites.setPoints(sel ? sel.sites.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa>=big?6:3.5,g})) : []);
-  const area = EB.drawOpArea(fpMap, fpArea, st.d || null); FPAREA = area;
-  if (sel) { const b = area ? L.latLngBounds(area.lines.flat()) : L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])); fpMap.fitBounds(b.pad(0.08), {maxZoom:13}); FPM[st.d] && FPM[st.d].mk.bringToFront(); }
+  FPSEL = st.d && acc[st.d];
+  fpMapRender(true);
   const ma = EB.drawOpArea(map, mainArea, st.d || null, {fill:0.08, weight:2});
   if (ma && st.d) map.fitBounds(L.latLngBounds(ma.lines.flat()).pad(0.08), {maxZoom:13});
-  document.getElementById("fpLeg").innerHTML = `<span><span class="swatch" style="background:${c2};border-radius:50%;opacity:.6"></span>Kreis = Schwerpunkt der Baustellen eines Netzbetreibers, Fläche ∝ Anzahl</span>`+
-    `<span><span class="swatch" style="background:transparent;border:2px solid ${ORANGE()[0]};border-radius:2px"></span>Netzgebiet</span>`+
-    (sel && FPAREA ? `<span class="muted">${FPAREA.n} Gemeinden${FPAREA.shared?`, davon ${FPAREA.shared} mit mehreren Netzbetreibern`:""}</span>` : "")+
-    (sel ? `<span><span class="swatch" style="background:${ORANGE()[0]};border-radius:50%"></span>ausgewählt</span><span><span class="swatch" style="background:${gc[1]};border-radius:50%"></span>bewilligt</span><span><span class="swatch" style="background:${gc[2]};border-radius:50%"></span>im Bau</span><button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>` : "");
-  const b = document.getElementById("fpClr"); if (b) b.onclick = () => { selDso(st.d);  };
 }
 document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
