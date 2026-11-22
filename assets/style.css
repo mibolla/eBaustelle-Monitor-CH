@@ -245,3 +245,7 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 .lg-note{margin-left:6px}
 /* hint and fact lines wrap instead of widening the hover card */
 .ct-hint,.ct-facts{contain:inline-size}
+/* scrollable operator list */
+.fp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.fp-head input{width:190px;margin-left:auto}
+.fp-scroll{height:560px;overflow-y:auto;overflow-x:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);scrollbar-width:thin}
