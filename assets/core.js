@@ -269,6 +269,15 @@
     C.defaults.interaction = { mode: "index", intersect: false };
     C.defaults.plugins.tooltip.enabled = false;
     C.defaults.plugins.tooltip.external = EB.chartTip;
+    // empty state: a chart without data says so instead of showing blank axes
+    if (!EB._emptyReg) { EB._emptyReg = true; C.register({ id: "ebEmpty", afterDraw(ch) {
+      const any = ch.data.datasets.some((d) => !d.hidden && (d.data || []).some((v) => (typeof v === "object" && v ? v.y || v.x : v)));
+      if (any || !ch.chartArea) return;
+      const { left, right, top, bottom } = ch.chartArea, x = (left + right) / 2, y = (top + bottom) / 2, g = ch.ctx;
+      g.save(); g.fillStyle = EB.css("--surface"); g.globalAlpha = 0.85; g.fillRect(left, top, right - left, bottom - top); g.globalAlpha = 1;
+      g.textAlign = "center"; g.fillStyle = EB.css("--text-2"); g.font = "500 13px Inter, system-ui, sans-serif"; g.fillText("Keine Daten für diese Filterauswahl", x, y - 6);
+      g.fillStyle = EB.css("--muted"); g.font = "12px Inter, system-ui, sans-serif"; g.fillText("Filter oben anpassen oder zurücksetzen", x, y + 13); g.restore();
+    } }); }
   };
   /* lean HTML tooltip shared by all charts */
   EB.chartTip = function (ctx) {
@@ -702,4 +711,12 @@
   let decoT;
   new MutationObserver(() => { clearTimeout(decoT); decoT = setTimeout(EB.decorateAll, 60); }).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener("DOMContentLoaded", () => setTimeout(EB.decorateAll, 0));
+
+  /* small notice (e.g. when a conflicting filter was removed automatically) */
+  EB.toast = function (msg) {
+    let t = document.getElementById("ebtoast");
+    if (!t) { t = document.createElement("div"); t.id = "ebtoast"; t.className = "ebtoast"; t.setAttribute("role", "status"); document.body.append(t); }
+    t.textContent = msg; t.classList.add("on");
+    clearTimeout(EB._toastT); EB._toastT = setTimeout(() => t.classList.remove("on"), 4200);
+  };
 })();

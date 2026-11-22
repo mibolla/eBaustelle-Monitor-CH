@@ -102,7 +102,9 @@ function draw(){
   EB.chart("cCanton",{type:"bar",data:{labels:cs.map(c=>c[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:cs.map(c=>c[1]),
       backgroundColor:cs.map(c=>EB.dim(EB.css("--s1"),!f.cantons.length||f.cantons.includes(c[0])))})]},
     options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Kanton filtern"}}},
-      onClick:(e,els)=>{ if(els.length) EB.toggleIn("cantons",cs[els[0].index][0],e); }}});
+      onClick:(e,els)=>{ if(!els.length) return; const c=cs[els[0].index][0];
+        if (f.dso && !f.cantons.includes(c) && !P.some(p=>p.canton===c&&(p.dsoName||"").includes(f.dso))) { EB.toast(`Versorger-Filter «${f.dso}» entfernt – keine Projekte dieses Netzbetreibers in ${c}`); f.dso=""; }
+        EB.toggleIn("cantons",c,e); }}});
 
   // 3 size (ordinal ramp)
   const BS = base("sizes"); const ramp = ["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")];
@@ -133,7 +135,9 @@ function draw(){
   if (f.dso && !dd.find(d=>d[0]===f.dso)) dd.push([f.dso, byD[f.dso]||0]);
   EB.chart("cDso",{type:"bar",data:{labels:dd.map(d=>d[0].length>34?d[0].slice(0,33)+"…":d[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:dd.map(d=>d[1]),backgroundColor:dd.map(d=>EB.dim(EB.css("--s1"),!f.dso||f.dso===d[0]))})]},
     options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>dd[it[0].dataIndex][0],label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Versorger filtern"}}},
-      onClick:(e,els)=>{ if(!els.length) return; const d=dd[els[0].index][0]; f.dso = f.dso===d ? "" : d; EB.apply(); }}});
+      onClick:(e,els)=>{ if(!els.length) return; const d=dd[els[0].index][0];
+        if (f.dso!==d && f.cantons.length && !P.some(p=>f.cantons.includes(p.canton)&&(p.dsoName||"").includes(d))) { EB.toast(`Kantons-Filter ${f.cantons.join(", ")} entfernt – «${d}» hat dort keine Projekte`); f.cantons=[]; }
+        f.dso = f.dso===d ? "" : d; EB.apply(); }}});
 
   // 7 e-machines / CO2 trend (own dims: flags + years)
   const BE = base("emach","co2m","y0","y1");

@@ -54,14 +54,20 @@ EB.shell("gwr.html"); EB.chartDefaults();
 const G = window.GWR, GC = G.cols, MUN = window.MUN;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
 const st = { sel:[0,1,2], c:"", z:0, d:"", cls:null, sb:null };
+// canton and grid operator are linked: if a choice leaves no buildings, drop the other filter and say so
+const anyPipe = (c, d) => GL.some(g=>g.st<3&&(!c||g.canton===c)&&(!d||g.dso.includes(d)));
+function setCanton(c){ if (c && st.d && !anyPipe(c, st.d)) { EB.toast(`Versorger-Filter «${st.d}» entfernt – keine Baustellen dieses Netzbetreibers in ${c}`); st.d=""; document.getElementById("fD").value=""; }
+  st.c=c; document.getElementById("fC").value=c; draw(); }
+function setDso(d){ if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
+  st.d=d; document.getElementById("fD").value=d; draw(); }
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
 document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
 function chips(){ document.getElementById("fS").innerHTML = G.status.slice(0,3).map((s,i)=>`<button class="chip ${st.sel.includes(i)?"on":""}" data-i="${i}">${s}</button>`).join("");
   document.querySelectorAll("#fS [data-i]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; st.sel = st.sel.includes(i)?st.sel.filter(x=>x!==i):[...st.sel,i]; chips(); draw(); }); }
-document.getElementById("fC").onchange=e=>{st.c=e.target.value; draw();};
+document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
 document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
-document.getElementById("fD").onchange=e=>{st.d=e.target.value.trim(); draw();};
+document.getElementById("fD").onchange=e=>{setDso(e.target.value.trim());};
 const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
 const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map);
 function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
@@ -83,7 +89,7 @@ function draw(){
   const gc = gcol();
   const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>st.sel.reduce((x,s)=>x+b[1][s],0)-st.sel.reduce((x,s)=>x+a[1][s],0));
   EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s)&&(!st.c||st.c===c[0]))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
-    options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; st.c = st.c===c?"":c; document.getElementById("fC").value=st.c; draw(); },
+    options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; setCanton(st.c===c?"":c); },
     plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
         labels:{generateLabels:()=>[0,1,2].map(s=>({text:G.status[s],datasetIndex:s,fillStyle:EB.dim(gc[s],st.sel.includes(s)),strokeStyle:"transparent",borderRadius:3,
           fontColor:st.sel.includes(s)?EB.css("--text-2"):EB.css("--muted")}))}},
@@ -111,7 +117,7 @@ if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColu
 const fpMap = EB.baseMap("fpMap"); 
 const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
-const selDso = (d) => { st.d = st.d===d ? "" : d; document.getElementById("fD").value = st.d; draw(); };
+const selDso = (d) => setDso(st.d===d ? "" : d);
 function drawFlex(){
   const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value, inclP = document.getElementById("fpProj").checked;
   const acc = {};
