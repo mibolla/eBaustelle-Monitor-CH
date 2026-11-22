@@ -5,12 +5,12 @@
 <title>Karte · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=015b6c09">
+<link rel="stylesheet" href="assets/style.css?v=119360b2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script><script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
-<script src="assets/core.js?v=fbfa5816"></script>
+<script src="assets/core.js?v=31fb9f35"></script>
 </head>
 <body>
 <main class="wrap">
@@ -36,7 +36,7 @@ const G = window.GWR, GC = G.cols;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.dso=((window.MUN||{})[+m[2]]||[])[2]||""; return o; });
 const map = EB.baseMap("map");  const PL = EB.PointLayer(L);
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
-const gwrLayer = new PL({zoomScale:true, tip:p=>`<b>GWR ${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}${p.g.dw?" · "+p.g.dw+" Whg.":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})});
+const gwrLayer = new PL({zoomScale:false, tip:p=>`<b>GWR ${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}${p.g.dw?" · "+p.g.dw+" Whg.":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})});
 const projLayer = new PL({zoomScale:true, tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} ${p.p.canton} · ${p.p.typeName} · ${p.p.year}<br>${EB.chf(p.p.value)}`, card:p=>EB.projCard(p.p)});
 const wms = EB.gwrWms(); const HID_T = new Set(), HID_G = new Set();
 function draw(){
@@ -45,11 +45,11 @@ function draw(){
   const pts = F.filter(p=>p.lat&&p.geo<=2&&!HID_T.has(p.type)).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:tc[p.type],r:p.value?Math.max(2.5,Math.min(16,Math.sqrt(p.value/1e6)*1.7)):2.5,p}));
   projLayer.setPoints(document.getElementById("lP").checked?pts:[]);
   const cs = EB.filters.cantons, done = document.getElementById("lDone").checked;
-  const gp = document.getElementById("lG").checked ? GL.filter(g=>(g.st<3||done)&&!HID_G.has(g.st)&&(!cs.length||cs.includes(g.canton))).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa?Math.max(1.8,Math.min(9,Math.sqrt(g.fa)/12)):1.8,alpha:.8,g})) : [];
+  const gp = document.getElementById("lG").checked ? GL.filter(g=>(g.st<3||done)&&!HID_G.has(g.st)&&(!cs.length||cs.includes(g.canton))).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),alpha:.8,g})) : [];
   gwrLayer.setPoints(gp);
   if (document.getElementById("lW").checked) wms.addTo(map); else wms.remove();
   EB.mapLegend(document.getElementById("legP"), window.PROJ.types.map((t,k)=>({key:k,label:t,color:tc[k]})), HID_T, draw);
-  EB.mapLegend(document.getElementById("legG"), G.status.map((t,k)=>({key:k,label:t,color:gc[k],round:true})), HID_G, draw);
+  EB.mapLegend(document.getElementById("legG"), G.status.map((t,k)=>({key:k,label:t,color:gc[k],round:true})), HID_G, draw); if (document.getElementById("lG").checked) document.getElementById("legG").insertAdjacentHTML("beforeend", EB.sizeLegend());
   document.getElementById("cnt").textContent = `${EB.n0(pts.length)} Projekte · ${EB.n0(gp.length)} GWR-Gebäude`;
 }
 gwrLayer.addTo(map); projLayer.addTo(map);

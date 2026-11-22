@@ -284,3 +284,4 @@ img.emb.logo{border-radius:4px;background:#fff}
 /* lean bubble hover */
 .leaflet-tooltip.btip-w{padding:4px 8px;font-size:11.5px;line-height:1.35;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap}
 .btip{display:flex;flex-direction:column}.btip b{font-weight:600;display:flex;align-items:center}.btip b img.emb{margin-right:5px}.btip span{color:var(--text-2)}
+.sizeleg{display:inline-flex;align-items:flex-end;gap:8px;margin-left:8px;font-size:12px}.sizeleg svg{overflow:visible}

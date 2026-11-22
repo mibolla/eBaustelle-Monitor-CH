@@ -5,13 +5,13 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=015b6c09">
+<link rel="stylesheet" href="assets/style.css?v=119360b2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
-<script src="assets/core.js?v=fbfa5816"></script>
+<script src="assets/core.js?v=31fb9f35"></script>
 </head>
 <body>
 <main class="wrap">
@@ -117,7 +117,7 @@ document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
 document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
 document.getElementById("fD").onchange=e=>{setDso(e.target.value.trim());};
 const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
-const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map); const mainArea = L.layerGroup().addTo(map); canSel.addTo(map); canHov.addTo(map);
+const layer = new PL({zoomScale:false, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map); const mainArea = L.layerGroup().addTo(map); canSel.addTo(map); canHov.addTo(map);
 function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
@@ -154,8 +154,8 @@ function draw(){
   EB.chart("cSize",{type:"bar",data:{labels:bins.map(b=>b[2]).concat(["unbekannt"]),datasets:[EB.bar({label:"Gebäude",backgroundColor:["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")].map((c,i)=>EB.dim(c,st.sb==null||st.sb===i)),data:[0,1,2,3,4,5].map(i=>pipeS.filter(g=>inBin(g,i)).length)})]},
     options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const i=els[0].index; st.sb = st.sb===i?null:i; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Grösse filtern"}}}}});
   drawFlex();
-  layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa?Math.max(1.6,Math.min(9,Math.sqrt(g.fa)/12)):1.6,g})));
-  EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, "Grösse ∝ Geschossfläche · offizieller GWR-Layer ab Zoom 15");
+  layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),g})));
+  EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, "offizieller GWR-Layer ab Zoom 15"); document.getElementById("leg").insertAdjacentHTML("beforeend", EB.sizeLegend());
   const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
@@ -165,7 +165,7 @@ function draw(){
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpCanton = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
+const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpCanton = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:false, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
@@ -209,6 +209,7 @@ function fpMapRender(fit){
     sel && FPAREA ? `<button class="lg-link" id="fpMunList" title="Liste der Gemeinden, nach Anzahl Baustellen">${FPAREA.n} Gemeinden</button>${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""}` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
   const ml = document.getElementById("fpMunList"); if (ml) ml.onclick = (e) => { e.stopPropagation(); openMunList(ml); };
   if (FPFOCUS) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpFocusX" title="Zurück zum ganzen Netzgebiet">✕ Fokus: ${EB.esc(FPFOCUS.name)}</button>`); document.getElementById("fpFocusX").onclick = () => { FPFOCUS = null; fpMapRender(true); }; }
+  if (sel) el.insertAdjacentHTML("beforeend", EB.sizeLegend());
   if (sel) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>`); document.getElementById("fpClr").onclick = () => selDso(st.d); }
 }
 /* list of the selected operator's municipalities, by population; click → choose focus */
@@ -247,7 +248,7 @@ function openMunList(anchor){
     ask.querySelector("#mwNo").onclick = (e) => { e.preventDefault(); ask.innerHTML = ""; r.style.background = ""; };
   });
 }
-function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:x.fa>=FPBIG?6:3.5,alpha:.9,g:x})); }
+function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:EB.faR(x.fa),alpha:.9,g:x})); }
 function fpHover(op, from){
   if (op === fpHot) return;
   const prev = fpHot; fpHot = op;
