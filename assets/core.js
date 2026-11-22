@@ -590,12 +590,23 @@
   };
 
   /* ---------------- link helpers */
+  // WGS84 → LV95 (swisstopo approximate formulas, ~1 m)
+  EB.lv95 = (lat, lon) => {
+    const p = (lat * 3600 - 169028.66) / 10000, l = (lon * 3600 - 26782.5) / 10000;
+    return [Math.round(2600072.37 + 211455.93 * l - 10938.51 * l * p - 0.36 * l * p * p - 44.54 * l ** 3),
+            Math.round(1200147.07 + 308807.95 * p + 3745.25 * l * l + 76.63 * p * p - 194.56 * l * l * p + 119.79 * p ** 3)];
+  };
   EB.lnk = {
-    gwrMap: (lat, lon) => `https://map.geo.admin.ch/#/map?lang=de&z=11&layers=ch.bfs.gebaeude_wohnungs_register&bgLayer=ch.swisstopo.swissimage&swisssearch=${lat.toFixed(5)},${lon.toFixed(5)}`,
+    gwrMap: (lat, lon) => { const [e, n] = EB.lv95(lat, lon); return `https://map.geo.admin.ch/#/map?lang=de&topic=ech&center=${e},${n}&z=11.5&bgLayer=ch.swisstopo.swissimage&layers=ch.bfs.gebaeude_wohnungs_register`; },
     gwrRec: (egid) => `https://api3.geo.admin.ch/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/${egid}_0/extendedHtmlPopup?lang=de`,
     // the two links offered by the official GWR popup on map.geo.admin.ch
     gwrInfo: (egid) => `https://api3.geo.admin.ch/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/${egid}_0/extendedHtmlPopup?lang=de`,
-    gwrObj: (egid) => `https://map.geo.admin.ch/?ch.bfs.gebaeude_wohnungs_register=${egid}_0&lang=de&topic=ech&layers=ch.bfs.gebaeude_wohnungs_register`,
+    // map.geo.admin: aerial image (SWISSIMAGE), GWR layer with the building selected, centred, ~500 m across (z 11.5 ≈ 0.36 m/px)
+    gwrObj: (egid, lat, lon) => {
+      if (lat == null || lon == null) return `https://map.geo.admin.ch/#/map?lang=de&topic=ech&bgLayer=ch.swisstopo.swissimage&layers=ch.bfs.gebaeude_wohnungs_register@features=${egid}_0`;
+      const [e, n] = EB.lv95(lat, lon);
+      return `https://map.geo.admin.ch/#/map?lang=de&topic=ech&center=${e},${n}&z=11.5&bgLayer=ch.swisstopo.swissimage&layers=ch.bfs.gebaeude_wohnungs_register@features=${egid}_0`;
+    },
     elcom: (bfs) => `https://www.strompreis.elcom.admin.ch/municipality/${bfs}`,
     zefix: (name) => `https://www.zefix.ch/de/search/entity/list?mainSearch=${encodeURIComponent(name.replace(/\b(ARGE|INGE)\b/gi, "").trim())}`,
     web: (name) => `https://duckduckgo.com/?q=${encodeURIComponent(name + " Referenzen")}`,
@@ -620,7 +631,7 @@
       <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
         ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", g.dso ? EB.entList("dso", g.dso, "<br>") : "")}</dl>
       ${EB.simapLinks(g.egid)}
-      <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Karte", EB.lnk.gwrObj(g.egid))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
+      <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Luftbild", EB.lnk.gwrObj(g.egid, g.lat, g.lon))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
       <div class="pc-src">Quelle: BFS, Gebäude- und Wohnungsregister</div></div>`;
   };
   EB.projCard = function (p) {

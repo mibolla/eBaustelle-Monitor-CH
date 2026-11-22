@@ -10,7 +10,7 @@
 <script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script><script src="data/municipalities.js?v=7dfecca4"></script>
-<script src="assets/core.js?v=f67b476d"></script>
+<script src="assets/core.js?v=ac5fc009"></script>
 </head>
 <body>
 <main class="wrap">
@@ -61,7 +61,7 @@ async function select(id){
   const firmsTbl = (d.firms||[]).map(f=>`<tr><td>${EB.ent("firm",f.name)}<div class="small muted">${f.roles.map(r=>RL[r]||({contractor:"Bauunternehmen",planner:"Planer"})[r]||r).join(", ")}</div></td>
       <td class="num">${EB.chf(f.value)}</td><td class="num">${f.n}</td><td class="small"><a href="${EB.lnk.zefix(f.name)}" target="_blank" rel="noopener">Zefix ↗</a><br><a href="${EB.lnk.web(f.name)}" target="_blank" rel="noopener">Referenzen ↗</a></td></tr>`).join("");
   const gwr = (d.gwr||[]).map(g=>`<tr><td><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener" title="GWR-Zusatzinformation">EGID ${g.egid} ↗</a>${g.name?`<div class="small muted">${EB.esc(g.name)}</div>`:""}</td><td>${EB.esc(g.status||"–")}</td><td class="small">${EB.esc(g.klass||"–")}</td>
-      <td class="num">${g.year||"–"}</td><td class="num">${g.area?EB.n0(g.area)+" m²":"–"}${g.floors?` × ${g.floors} G.`:""}</td><td class="small">${EB.esc(g.heating||"–")}</td><td class="small"><a href="${EB.lnk.gwrObj(g.egid)}" target="_blank" rel="noopener">Objekt auf Karte ↗</a></td></tr>`).join("");
+      <td class="num">${g.year||"–"}</td><td class="num">${g.area?EB.n0(g.area)+" m²":"–"}${g.floors?` × ${g.floors} G.`:""}</td><td class="small">${EB.esc(g.heating||"–")}</td><td class="small"><a href="${EB.lnk.gwrObj(g.egid, g.lat, g.lon)}" target="_blank" rel="noopener">Objekt auf Luftbild ↗</a></td></tr>`).join("");
   const nts = (d.notices||[]).map(n=>`<div class="it ${n.t==="award"||n.t==="contest_result"?"award":""}">
       <div class="small muted">${n.d} · ${NT[n.t]||n.t} · ${CT[n.c]||n.c} · ${EB.PROC_LABEL[n.p]||n.p||"–"}${n.fw?" · Rahmenvertrag":""}</div>
       <div><b>${EB.esc(n.ti)}</b> <a href="${n.u}" target="_blank" rel="noopener" class="small">simap ↗</a></div>

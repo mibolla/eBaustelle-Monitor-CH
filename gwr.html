@@ -12,7 +12,7 @@
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
 <script src="data/gwrlinks.js?v=caee8348"></script>
-<script src="assets/core.js?v=f67b476d"></script>
+<script src="assets/core.js?v=ac5fc009"></script>
 </head>
 <body>
 <main class="wrap">
@@ -174,7 +174,7 @@ function draw(){
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
       <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${g.dso?EB.entList("dso",g.dso,"<br>"):"–"}</td>
-      <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid)}" target="_blank" rel="noopener">Objekt auf Karte ↗</a></td></tr>`).join("")+"</tbody>";
+      <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid, g.lat, g.lon)}" target="_blank" rel="noopener">Objekt auf Luftbild ↗</a></td></tr>`).join("")+"</tbody>";
 }
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
