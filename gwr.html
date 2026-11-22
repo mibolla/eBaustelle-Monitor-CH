@@ -5,12 +5,12 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=22617f89">
+<link rel="stylesheet" href="assets/style.css?v=e5098318">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script><script src="data/munigeo.js?v=2e3604c5"></script>
+<script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=a259f8c9"></script>
+<script src="assets/core.js?v=da919031"></script>
 </head>
 <body>
 <main class="wrap">
@@ -128,18 +128,26 @@ function draw(){
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
+const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
-let FPSEL = null;
+let FPSEL = null, FPFOCUS = null;   // FPFOCUS = {bfs, name, canton, op}
 function fpMapRender(fit){
   const sel = FPSEL, gc = gcol(), [o1] = ORANGE();
   if (HID_FP.has("bub")) fpLayer.remove(); else fpLayer.addTo(fpMap);
   fpHoverArea.clearLayers();
-  fpSites.setPoints(sel ? fpSitePts(sel) : []);
+  if (FPFOCUS && FPFOCUS.op !== st.d) FPFOCUS = null;
+  fpFocus.clearLayers();
+  const pts = sel ? fpSitePts(sel).filter(p => !FPFOCUS || p.g.bfs === FPFOCUS.bfs) : [];
+  fpSites.setPoints(pts);
   const area = HID_FP.has("area") ? (fpArea.clearLayers(), null) : EB.drawOpArea(fpMap, fpArea, st.d || null); FPAREA = area || (st.d ? EB.opArea(st.d) : null);
+  if (FPFOCUS) {
+    const poly = EB.munPoly(String(FPFOCUS.bfs));
+    if (poly) { const pl = L.polygon(poly, {color:EB.css("--text"), weight:2.5, fill:true, fillColor:ORANGE()[0], fillOpacity:0.18, interactive:false}).addTo(fpFocus); if (fit) fpMap.fitBounds(pl.getBounds().pad(0.15), {maxZoom:15}); }
+    fit = false;
+  }
   if (fit && sel) { const b = FPAREA ? L.latLngBounds(FPAREA.lines.flat()) : L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])); fpMap.fitBounds(b.pad(0.08), {maxZoom:13}); }
   if (sel && FPM[st.d] && !HID_FP.has("bub")) FPM[st.d].mk.bringToFront();
   const el = document.getElementById("fpLeg");
@@ -147,8 +155,31 @@ function fpMapRender(fit){
     {key:0, label:"projektiert", color:gc[0], round:true}, {key:1, label:"bewilligt", color:gc[1], round:true}, {key:2, label:"im Bau", color:gc[2], round:true},
     {key:"area", label:"Netzgebiet", color:o1}, {key:"bub", label:"Netzbetreiber (Kreis ∝ Anzahl)", color:EB.css("--muted"), round:true}],
     HID_FP, () => fpMapRender(false),
-    sel && FPAREA ? `${FPAREA.n} Gemeinden${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""} · Baustellen inkl. projektiert` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
+    sel && FPAREA ? `<button class="lg-link" id="fpMunList" title="Liste der Gemeinden, nach Einwohnerzahl">${FPAREA.n} Gemeinden</button>${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""} · Baustellen inkl. projektiert` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
+  const ml = document.getElementById("fpMunList"); if (ml) ml.onclick = (e) => { e.stopPropagation(); openMunList(ml); };
+  if (FPFOCUS) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpFocusX" title="Zurück zum ganzen Netzgebiet">✕ Fokus: ${EB.esc(FPFOCUS.name)}</button>`); document.getElementById("fpFocusX").onclick = () => { FPFOCUS = null; fpMapRender(true); }; }
   if (sel) { el.insertAdjacentHTML("beforeend", `<button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>`); document.getElementById("fpClr").onclick = () => selDso(st.d); }
+}
+/* list of the selected operator's municipalities, by population; click → choose focus */
+function openMunList(anchor){
+  const op = st.d, sel = FPSEL; if (!op) return;
+  const rows = Object.keys(MUN).filter(b => (MUN[b][2]||"").split(" | ").includes(op)).map(b => {
+    const m = MUN[b]; const n = (sel && sel.sitesAll || []).filter(g => g.bfs === +b).length;
+    return {bfs:+b, name:m[0], canton:m[1], pop:m[4]||0, sites:n, shared:(m[2]||"").includes(" | ")};
+  }).sort((a,b) => b.pop - a.pop);
+  const list = rows.map((r,i) => `<div class="mw-row" data-i="${i}"><span>${EB.esc(r.name)} <span class="muted">${r.canton}</span>${r.shared ? ' <span class="badge" title="mehrere Netzbetreiber in dieser Gemeinde">geteilt</span>' : ""}</span><span class="n">${r.pop ? EB.n0(r.pop) : "–"}</span><span class="s">${r.sites ? EB.n0(r.sites) + " Baust." : "–"}</span></div>`).join("");
+  const head = `<div class="pc-top"><span class="pc-status" style="--c:${ORANGE()[0]}">Netzgebiet</span><span class="pc-id">${rows.length} Gemeinden</span></div>
+    <div class="pc-title">${EB.esc(op)}</div><div class="pc-sub">Sortiert nach ständiger Wohnbevölkerung 2025 (BFS STATPOP)</div>`;
+  const win = EB.showPop(anchor, `${head}<div id="mwAsk"></div><div class="mw-head"><span>Gemeinde</span><span>Einwohner</span><span>Baustellen</span></div><div class="mw-list">${list}</div>`, "munwin");
+  win.querySelectorAll(".mw-row").forEach(r => r.onclick = () => {
+    const x = rows[+r.dataset.i], ask = win.querySelector("#mwAsk");
+    win.querySelectorAll(".mw-row").forEach(q => q.style.background = ""); r.style.background = "var(--accent-soft)";
+    ask.innerHTML = `<div class="mw-ask"><b>${EB.esc(x.name)} (${x.canton})</b> – ${x.pop ? EB.n0(x.pop) + " Einwohner · " : ""}${x.sites} Baustellen<br>Karte nur auf diese Gemeinde fokussieren statt auf das ganze Netzgebiet?
+      <div class="pc-btns" style="border:0;padding-top:8px"><a href="#" class="pbtn primary" id="mwFocus">Karte auf Gemeinde fokussieren</a><a href="#" class="pbtn" id="mwPage">Ganze Seite filtern</a><a href="#" class="pbtn" id="mwNo">Abbrechen</a></div></div>`;
+    ask.querySelector("#mwFocus").onclick = (e) => { e.preventDefault(); FPFOCUS = {bfs:x.bfs, name:x.name, canton:x.canton, op}; EB.closePop(); fpMapRender(true); };
+    ask.querySelector("#mwPage").onclick = (e) => { e.preventDefault(); EB.closePop(); setMun(x.name + "|" + x.canton); };
+    ask.querySelector("#mwNo").onclick = (e) => { e.preventDefault(); ask.innerHTML = ""; r.style.background = ""; };
+  });
 }
 function fpSitePts(o, color){ return (o.sitesAll||o.sites).filter(x=>!HID_FP.has(x.st)).map(x=>({lat:x.lat,lon:x.lon,color:color||gcol()[x.st],r:x.fa>=FPBIG?6:3.5,alpha:.9,g:x})); }
 function fpHover(op, from){

@@ -4,10 +4,10 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quellen & Methoden · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=22617f89">
+<link rel="stylesheet" href="assets/style.css?v=e5098318">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="data/validation.js?v=71f753ea"></script>
-<script src="assets/core.js?v=a259f8c9"></script>
+<script src="assets/core.js?v=da919031"></script>
 </head>
 <body>
 <main class="wrap">
@@ -121,6 +121,7 @@ const SRC = [
   ["Gebäude- und Wohnungsregister (GWR)","BFS","Gebäude mit Status projektiert/bewilligt/im Bau/bestehend, Baujahr, Fläche, Geschosse, Wohnungen, Heizung, Adressen (Eingänge)","Export 20.11.2026","Öffentlicher Datenbezug (MADD), Stufe A","https://www.housing-stat.ch/de/madd/public.html","data/raw/gwr/"],
   ["GWR-Kartenlayer «Gebäudestatus»","BFS / swisstopo","Visuelle Kontrolle, Deep-Links je Gebäude (EGID)","aktuell","WMS / REST (geo.admin)","https://map.geo.admin.ch/#/map?lang=de&topic=bfs&layers=ch.bfs.gebaeude_wohnungs_register","–"],
   ["Strompreise und Netzbetreiber","ElCom","Netzbetreiber je Gemeinde, Tarife 2026 (C3, H4)","2026","LINDAS SPARQL","https://www.strompreis.elcom.admin.ch","data/raw/elcom/"],
+  ["Wohnbevölkerung","BFS STATPOP","Ständige Wohnbevölkerung je Gemeinde (Sortierung der Gemeindeliste im Flex-Pool)","2025","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/","data/raw/bfs/"],
   ["Bauausgaben","BFS Bau- und Wohnbaustatistik","Bauausgaben nach Kanton, Auftraggeber, Hoch-/Tiefbau, Neubau/Umbau","2014–2024","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/","data/raw/bfs/"],
   ["Wege zu Netto-Null für Baumaschinen","EBP 2025 (zitiert BAFU 2025)","464'067 t CO₂e Baumaschinen 2023; > 500 GWh/a Strombedarf 2050","2023/2050","Projektunterlage (nicht öffentlich verlinkt); Primärquelle BAFU","https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html","–"],
   ["Hintergrundkarte (Grenzen)","BFS GEOSTAT (via swiss-maps 4.7.0, BSD-3-Clause)","Generalisierte Landes-, Kantons- und Gemeindegrenzen und Seen 2025 als ruhiger Vektor-Hintergrund","2025","TopoJSON → GeoJSON (scripts/06_basemap.py)","https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html","data/raw/boundaries/"],

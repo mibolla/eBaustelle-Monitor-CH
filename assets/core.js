@@ -72,6 +72,7 @@
     ebp: ["EBP (2025) Wege zu Netto-Null für Baumaschinen in der Schweiz, S. 10 & 14 (Projektunterlage, nicht öffentlich verlinkt)", "https://www.ebp.ch"],
     bafuGhg: ["BAFU – Treibhausgasinventar der Schweiz (Quelle der 464 kt CO₂e Baumaschinen)", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html"],
     methods: ["Quellen & Methoden (dieses Dashboard)", "sources.html"],
+    bfsPop: ["BFS STATPOP – ständige Wohnbevölkerung nach Gemeinde 2025 (px-x-0102010000_101)", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/"],
     bfsGeo: ["BFS GEOSTAT – generalisierte Gemeindegrenzen 2025 (Hintergrundkarte)", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html"],
     swisstopo: ["swisstopo – Landeskarte grau (Detail ab Zoom 12)", "https://www.swisstopo.admin.ch"],
   };
@@ -90,7 +91,7 @@
     c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["simapNew", "simapArch", "methods"] },
     c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
     c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
-    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo"] },
+    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo", "bfsPop"] },
     c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
     c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
     c_month: { t: "Publikationen pro Monat und Quelle", b: "Kontrolle auf Lücken und Brüche. Archiv: alle Publikationen inkl. Ausschreibungen. Neue Plattform: neueste Publikation je Projekt (plus Lose) – deshalb weniger Ausschreibungen nach 7/2024.", s: ["simapNew", "simapArch"] },
@@ -681,6 +682,19 @@
     return "";
   };
   EB.closePop = () => { const p = document.getElementById("ebpop"); if (p) p.remove(); document.querySelectorAll(".ent.on").forEach((e) => e.classList.remove("on")); };
+  EB.showPop = function (anchor, inner, cls) {
+    EB.closePop();
+    const el = document.createElement("div");
+    el.id = "ebpop"; el.className = "ebcard ebpop" + (cls ? " " + cls : ""); el.setAttribute("role", "dialog");
+    el.innerHTML = `<button class="ebcard-x" aria-label="Schliessen">✕</button><div class="pcard">${inner}</div>`;
+    document.body.append(el);
+    const r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+    const below = r.bottom + h + 10 < innerHeight || r.top - h - 10 < 0;
+    el.style.left = Math.min(Math.max(8, r.left), innerWidth - w - 8) + "px";
+    el.style.top = Math.max(8, below ? r.bottom + 6 : r.top - h - 6) + "px";
+    el.querySelector(".ebcard-x").onclick = EB.closePop;
+    return el;
+  };
   EB.openPop = function (anchor) {
     const same = anchor.classList.contains("on");
     EB.closePop(); if (same) return;
@@ -719,6 +733,7 @@
     elcom: ["ElCom, Strompreise & Netzbetreiber", "https://www.strompreis.elcom.admin.ch", "Tarife 2026"],
     bfs: ["BFS, Bauausgaben", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/", "2024"],
     ebp: ["EBP (2025)", "https://www.ebp.ch", "2025"],
+    bfsPop: ["BFS STATPOP, Wohnbevölkerung", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/", "2025"],
     bfsGeo: ["BFS GEOSTAT, Gemeindegrenzen", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html", "2025"],
     swisstopo: ["swisstopo, Landeskarte", "https://www.swisstopo.admin.ch", "aktuell"],
     bafuGhg: ["BAFU, Treibhausgasinventar", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html", "2023"],
@@ -805,5 +820,12 @@
     if (!(o && o.noFill)) L.polygon(a.polys, { pane: "opArea", renderer: rnd, stroke: false, fillColor: col, fillOpacity: (o && o.fill) || 0.13, interactive: false }).addTo(group);
     L.polyline(a.lines, { pane: "opArea", renderer: rnd, color: col, weight: (o && o.weight) || 2.5, opacity: 0.95, lineJoin: "round", dashArray: (o && o.dash) || null, interactive: false }).addTo(group);
     return a;
+  };
+
+  EB.munPoly = function (bfs) {
+    const T = window.MUNIGEO; if (!T || !T.munis[bfs]) return null;
+    if (!EB._arcs) EB.opArea("__init__");
+    const A = EB._arcs;
+    return T.munis[bfs].map((r) => { const pts = []; r.forEach((i) => { const a = i >= 0 ? A[i] : A[~i].slice().reverse(); pts.push(...(pts.length ? a.slice(1) : a)); }); return pts; });
   };
 })();
