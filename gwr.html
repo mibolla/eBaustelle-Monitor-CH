@@ -5,7 +5,7 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=e5098318">
+<link rel="stylesheet" href="assets/style.css?v=d8c2bd64">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
@@ -136,7 +136,8 @@ const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mit
 let FPSEL = null, FPFOCUS = null;   // FPFOCUS = {bfs, name, canton, op}
 function fpMapRender(fit){
   const sel = FPSEL, gc = gcol(), [o1] = ORANGE();
-  if (HID_FP.has("bub")) fpLayer.remove(); else fpLayer.addTo(fpMap);
+  // with an operator selected, the map shows only its network area and building sites (no operator circles)
+  if (sel || HID_FP.has("bub")) fpLayer.remove(); else fpLayer.addTo(fpMap);
   fpHoverArea.clearLayers();
   if (FPFOCUS && FPFOCUS.op !== st.d) FPFOCUS = null;
   fpFocus.clearLayers();
@@ -149,11 +150,11 @@ function fpMapRender(fit){
     fit = false;
   }
   if (fit && sel) { const b = FPAREA ? L.latLngBounds(FPAREA.lines.flat()) : L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])); fpMap.fitBounds(b.pad(0.08), {maxZoom:13}); }
-  if (sel && FPM[st.d] && !HID_FP.has("bub")) FPM[st.d].mk.bringToFront();
+
   const el = document.getElementById("fpLeg");
   EB.mapLegend(el, [
     {key:0, label:"projektiert", color:gc[0], round:true}, {key:1, label:"bewilligt", color:gc[1], round:true}, {key:2, label:"im Bau", color:gc[2], round:true},
-    {key:"area", label:"Netzgebiet", color:o1}, {key:"bub", label:"Netzbetreiber (Kreis ∝ Anzahl)", color:EB.css("--muted"), round:true}],
+    {key:"area", label:"Netzgebiet", color:o1}].concat(sel ? [] : [{key:"bub", label:"Netzbetreiber (Kreis ∝ Anzahl)", color:EB.css("--muted"), round:true}]),
     HID_FP, () => fpMapRender(false),
     sel && FPAREA ? `<button class="lg-link" id="fpMunList" title="Liste der Gemeinden, nach Einwohnerzahl">${FPAREA.n} Gemeinden</button>${FPAREA.shared ? `, davon ${FPAREA.shared} mit mehreren Netzbetreibern` : ""} · Baustellen inkl. projektiert` : (sel ? "" : "Netzbetreiber wählen: Baustellen und Netzgebiet erscheinen"));
   const ml = document.getElementById("fpMunList"); if (ml) ml.onclick = (e) => { e.stopPropagation(); openMunList(ml); };
