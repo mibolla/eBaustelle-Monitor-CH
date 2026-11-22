@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="assets/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="data/projects.js"></script><script src="data/firms.js"></script><script src="data/gwr.js"></script>
+<script src="data/projects.js"></script><script src="data/firms.js"></script><script src="data/gwr.js"></script><script src="data/municipalities.js"></script>
 <script src="assets/core.js"></script>
 </head>
 <body>
@@ -31,13 +31,11 @@ EB.shell("map.html");
 document.getElementById("iM").outerHTML = EB.info("c_map"); document.getElementById("iG").outerHTML = EB.info("c_gwr");
 const P = EB.projects(); EB.firms();
 const G = window.GWR, GC = G.cols;
-const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; return o; });
+const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.dso=((window.MUN||{})[+m[2]]||[])[2]||""; return o; });
 const map = EB.baseMap("map");  const PL = EB.PointLayer(L);
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
-const gwrLayer = new PL({zoomScale:true, tip:p=>`<b>GWR ${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}${p.g.dw?" · "+p.g.dw+" Whg.":""}`,
-  onClick:(p,e)=>L.popup().setLatLng([p.lat,p.lon]).setContent(`<b>${G.status[p.g.st]}</b> · EGID ${p.g.egid}<br>${EB.esc(p.g.addr||"")}<br>${EB.esc(p.g.munName)} ${p.g.canton}<br>${EB.esc(G.classes[p.g.cls])}<br>Grundfläche ${p.g.area?EB.n0(p.g.area)+" m²":"–"} · Geschosse ${p.g.floors||"–"} · Whg. ${p.g.dw||"–"}${p.g.year?"<br>Baujahr "+p.g.year:""}<br><a href="${EB.lnk.gwrRec(p.g.egid)}" target="_blank">GWR-Eintrag ↗</a> · <a href="${EB.lnk.gwrMap(p.lat,p.lon)}" target="_blank">map.geo.admin ↗</a>`).openOn(map)});
-const projLayer = new PL({zoomScale:true, tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} ${p.p.canton} · ${p.p.typeName} · ${p.p.year}<br>${EB.chf(p.p.value)}`,
-  onClick:(p)=>L.popup().setLatLng([p.lat,p.lon]).setContent(`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.authName)}<br>${EB.esc(p.p.munName)} ${p.p.canton} · ${p.p.year}<br>${p.p.typeName} · ${EB.chf(p.p.value)}<br>Versorger: ${EB.esc(p.p.dsoName||"–")}<br>${p.p.con.slice(0,3).map(i=>EB.esc(EB.firmName(i))).join(", ")}<br><a href="${EB.lnk.proj(p.p.id)}">Projektdetails →</a>`).openOn(map)});
+const gwrLayer = new PL({zoomScale:true, tip:p=>`<b>GWR ${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}${p.g.dw?" · "+p.g.dw+" Whg.":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})});
+const projLayer = new PL({zoomScale:true, tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} ${p.p.canton} · ${p.p.typeName} · ${p.p.year}<br>${EB.chf(p.p.value)}`, card:p=>EB.projCard(p.p)});
 const wms = EB.gwrWms();
 function draw(){
   const F = EB.filtered(); EB.setCount(F.length, P.length);

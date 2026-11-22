@@ -195,7 +195,7 @@ let hlMarker = null;
 function hl(id){ if (hlMarker) { hlMarker.remove(); hlMarker=null; } const p = id && EB._PI[id]; if (p && p.lat) hlMarker = L.circleMarker([p.lat,p.lon],{radius:14,color:EB.css("--text"),weight:2,fill:false}).addTo(map); }
 function drawMap(F){
   if(!map){ map = EB.baseMap("miniMap");  const PLy = EB.PointLayer(L);
-    layer = new PLy({tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} · ${p.p.typeName}<br>${EB.chf(p.p.value)}<br><span class="muted">Klick: Details</span>`, onClick:p=>location.href=EB.lnk.proj(p.p.id)}); layer.addTo(map);
+    layer = new PLy({tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} · ${p.p.typeName}<br>${EB.chf(p.p.value)}`, card:p=>EB.projCard(p.p)}); layer.addTo(map);
     map.on("moveend", ()=>{ if (document.getElementById("bboxF").checked) { bbox = map.getBounds(); draw(); } });
     document.getElementById("bboxF").onchange = (e)=>{ bbox = e.target.checked ? map.getBounds() : null; draw(); }; }
   const col = TCOL();

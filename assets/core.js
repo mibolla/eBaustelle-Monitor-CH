@@ -295,6 +295,7 @@
       onRemove(map) { this._c.remove(); map.off("moveend zoomend resize", this._draw, this); map.off("click", this._click, this); map.off("mousemove", this._hover, this); },
       _draw() {
         if (!this._map) return;
+        const sel = this._sel;
         const m = this._map, sz = m.getSize(), c = this._c, dpr = window.devicePixelRatio || 1;
         c.width = sz.x * dpr; c.height = sz.y * dpr; c.style.width = sz.x + "px"; c.style.height = sz.y + "px";
         L.DomUtil.setPosition(c, m.containerPointToLayerPoint([0, 0]));
@@ -310,6 +311,7 @@
           ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha || 0.75; ctx.fill();
           if (r >= 4) { ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeStyle = ring; ctx.stroke(); }
           this._scr.push([pt.x, pt.y, Math.max(r, 5), p]);
+          if (sel && p === sel) { ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(pt.x, pt.y, r + 4, 0, 6.2832); ctx.lineWidth = 2.5; ctx.strokeStyle = EB.css("--text"); ctx.stroke(); }
         }
         ctx.globalAlpha = 1;
       },
@@ -318,11 +320,23 @@
         for (const s of this._scr || []) { const d = (s[0] - x) ** 2 + (s[1] - y) ** 2; if (d < s[2] * s[2] && d < bd) { bd = d; best = s[3]; } }
         return best;
       },
-      _click(e) { const p = this._find(e); if (p && this.opts.onClick) this.opts.onClick(p, e); },
+      _click(e) {
+        const p = this._find(e); if (!p) return;
+        if (this.opts.card) {
+          this._sel = p; this._draw();
+          const m = this._map;
+          const pop = L.popup({ className: "eb-pop", maxWidth: 390, minWidth: 340, autoPanPadding: [24, 24], offset: [0, -4] })
+            .setLatLng([p.lat, p.lon]).setContent(this.opts.card(p)).openOn(m);
+          const el = pop.getElement();
+          const z = el && el.querySelector("[data-zoom]");
+          if (z) z.onclick = (ev) => { ev.preventDefault(); m.flyTo([p.lat, p.lon], Math.max(m.getZoom(), 17), { duration: 0.7 }); };
+          m.once("popupclose", () => { this._sel = null; this._draw(); });
+        } else if (this.opts.onClick) this.opts.onClick(p, e);
+      },
       _hover(e) {
         const p = this._find(e), tt = document.getElementById("tt");
         this._map.getContainer().style.cursor = p ? "pointer" : "";
-        if (p && this.opts.tip) { tt.innerHTML = this.opts.tip(p); tt.style.display = "block"; tt.style.left = e.originalEvent.clientX + 14 + "px"; tt.style.top = e.originalEvent.clientY + 10 + "px"; }
+        if (p && this.opts.tip) { tt.innerHTML = this.opts.tip(p) + (this.opts.card ? '<div class="tt-hint">Klick: Details & Links</div>' : ""); tt.style.display = "block"; tt.style.left = e.originalEvent.clientX + 14 + "px"; tt.style.top = e.originalEvent.clientY + 10 + "px"; }
         else tt.style.display = "none";
       },
     });
@@ -410,11 +424,47 @@
   /* ---------------- link helpers */
   EB.lnk = {
     gwrMap: (lat, lon) => `https://map.geo.admin.ch/#/map?lang=de&z=11&layers=ch.bfs.gebaeude_wohnungs_register&bgLayer=ch.swisstopo.swissimage&swisssearch=${lat.toFixed(5)},${lon.toFixed(5)}`,
-    gwrRec: (egid) => `https://api3.geo.admin.ch/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/${egid}_0/htmlPopup?lang=de`,
+    gwrRec: (egid) => `https://api3.geo.admin.ch/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/${egid}_0/extendedHtmlPopup?lang=de`,
+    // the two links offered by the official GWR popup on map.geo.admin.ch
+    gwrInfo: (egid) => `https://api3.geo.admin.ch/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/${egid}_0/extendedHtmlPopup?lang=de`,
+    gwrObj: (egid) => `https://map.geo.admin.ch/?ch.bfs.gebaeude_wohnungs_register=${egid}_0&lang=de&topic=ech&layers=ch.bfs.gebaeude_wohnungs_register`,
     elcom: (bfs) => `https://www.strompreis.elcom.admin.ch/municipality/${bfs}`,
     zefix: (name) => `https://www.zefix.ch/de/search/entity/list?mainSearch=${encodeURIComponent(name.replace(/\b(ARGE|INGE)\b/gi, "").trim())}`,
     web: (name) => `https://duckduckgo.com/?q=${encodeURIComponent(name + " Referenzen")}`,
     proj: (id) => `projects.html#${id}`,
     firm: (name) => `firms.html#${encodeURIComponent(name)}`,
+  };
+
+  /* ---------------- info cards for map popups (one design for GWR buildings and simap projects) */
+  const ICON_EXT = '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M4.5 2H2v8h8V7.5M7 2h3v3M10 2 5.5 6.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
+  const ICON_ZOOM = '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5M3.5 5h3M5 3.5v3" stroke="currentColor" stroke-width="1.3"/></svg>';
+  EB.btn = (label, href, kind) => kind === "zoom"
+    ? `<a href="#" class="pbtn" data-zoom="1">${ICON_ZOOM}${label}</a>`
+    : `<a href="${href}" class="pbtn${kind === "primary" ? " primary" : ""}" ${kind === "internal" || kind === "primary" ? "" : 'target="_blank" rel="noopener"'}>${label}${kind === "internal" || kind === "primary" ? " →" : ICON_EXT}</a>`;
+  const row = (k, v) => (v === null || v === undefined || v === "" || v === "–" ? "" : `<dt>${k}</dt><dd>${v}</dd>`);
+  EB.gwrCard = function (g, o) {
+    o = o || {};
+    const stCol = ["--gwr-proj", "--gwr-bew", "--gwr-bau", "--gwr-done"].map(EB.css)[g.st];
+    return `<div class="pcard">
+      <div class="pc-top"><span class="pc-status" style="--c:${stCol}">${EB.esc(o.status || "")}</span><span class="pc-id">EGID ${g.egid}</span></div>
+      <div class="pc-title">${EB.esc(g.addr || "Adresse nicht erfasst")}</div>
+      <div class="pc-sub">${EB.esc(g.munName || "")} ${EB.esc(g.canton || "")}</div>
+      <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
+        ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", EB.esc(g.dso || ""))}</dl>
+      <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Karte", EB.lnk.gwrObj(g.egid))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
+      <div class="pc-src">Quelle: BFS, Gebäude- und Wohnungsregister</div></div>`;
+  };
+  EB.projCard = function (p) {
+    const P = window.PROJ, col = EB.css(EB.TYPE_COLOR[p.type]);
+    const firms = (p.con || []).slice(0, 3).map((i) => EB.esc(EB.firmName(i))).join(", ");
+    const arch = (p.arch || []).slice(0, 2).map((i) => EB.esc(EB.firmName(i))).join(", ");
+    return `<div class="pcard">
+      <div class="pc-top"><span class="pc-status" style="--c:${col}">${EB.esc(p.typeName)}</span><span class="pc-id">${EB.esc(p.sizeName)} · ${p.y0 === p.y1 ? p.year : p.y0 + "–" + p.y1}</span></div>
+      <div class="pc-title">${EB.esc(p.title)}</div>
+      <div class="pc-sub">${EB.esc(p.authName)}</div>
+      <dl class="pc-kv">${row("Ort", EB.esc((p.munName || "–") + " " + (p.canton || "")))}${row("Zuschläge", p.value ? EB.chf(p.value) : "")}${row("Vergabeart", EB.PROC_LABEL[P.procs[p.proc]] || "")}
+        ${row("Bauunternehmen", firms)}${row("Architektur", arch)}${row("Netzbetreiber", EB.esc(p.dsoName || ""))}${row("CO₂ (Schätzung)", p.co2 ? EB.n0(p.co2) + " t" : "")}</dl>
+      <div class="pc-btns">${EB.btn("Projektdetails", EB.lnk.proj(p.id), "primary")}${EB.btn("Zoomen", "", "zoom")}${EB.btn("GWR-Karte am Ort", EB.lnk.gwrMap(p.lat, p.lon))}</div>
+      <div class="pc-src">Quelle: simap.ch · ${p.nn} Publikationen</div></div>`;
   };
 })();

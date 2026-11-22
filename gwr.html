@@ -62,8 +62,7 @@ document.getElementById("fC").onchange=e=>{st.c=e.target.value; draw();};
 document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
 document.getElementById("fD").onchange=e=>{st.d=e.target.value.trim(); draw();};
 const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
-const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`,
-  onClick:p=>window.open(EB.lnk.gwrRec(p.g.egid),"_blank")}); layer.addTo(map); EB.gwrWms().addTo(map);
+const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map);
 function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
@@ -101,12 +100,12 @@ function draw(){
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
       <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${EB.esc(g.dso||"–")}</td>
-      <td class="small"><a href="${EB.lnk.gwrRec(g.egid)}" target="_blank" rel="noopener">GWR ${g.egid} ↗</a><br><a href="${EB.lnk.gwrMap(g.lat,g.lon)}" target="_blank" rel="noopener">Karte ↗</a></td></tr>`).join("")+"</tbody>";
+      <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid)}" target="_blank" rel="noopener">Objekt auf Karte ↗</a></td></tr>`).join("")+"</tbody>";
 }
 let TOP = [], FP = [];
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, onClick:p=>window.open(EB.lnk.gwrRec(p.g.egid),"_blank")}); fpSites.addTo(fpMap);
+const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 const selDso = (d) => { st.d = st.d===d ? "" : d; document.getElementById("fD").value = st.d; draw(); };
 function drawFlex(){
@@ -138,7 +137,7 @@ function drawFlex(){
 document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
 document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
-document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrRec(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
+document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrInfo(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
 chips(); draw(); document.addEventListener("eb-redraw", draw);
 </script>
 </body>
