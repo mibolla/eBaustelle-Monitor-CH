@@ -299,6 +299,10 @@
     } }); }
   };
   /* lean HTML tooltip shared by all charts */
+  // short series names for the hover card (legends keep the full names)
+  const TIP_SHORT = { "Planung/Wettbewerb": "Planung/Wettb.", "Gebäudetechnik-Planung (HLKSE)": "HLKSE-Planung", "Netz-/Ladeinfrastruktur-Arbeiten": "Netz/Ladeinfra",
+    "Netz / Ladeinfrastruktur": "Netz/Ladeinfra", "E-Baumaschinen erwähnt": "E-Maschinen", "CO₂/Nachhaltigkeit erwähnt": "CO₂/Nachh.", "Versorger ist Bauherr": "Versorger als Bauherr",
+    "Bauingenieur / Bauleitung": "Bauing./Bauleitung", "Werkleitungen / Kanalisation": "Werkleitungen" };
   EB.chartTip = function (ctx) {
     let el = document.getElementById("ctip");
     if (!el) { el = document.createElement("div"); el.id = "ctip"; el.className = "ctip"; document.body.append(el); }
@@ -307,7 +311,8 @@
     const rows = (t.body || []).map((b, i) => {
       const line = (b.lines || []).join(" ").trim();
       const m = line.match(/^(.*?):\s(.*)$/);
-      const lab = m ? m[1] : (t.dataPoints[i] && t.dataPoints[i].dataset.label) || "";
+      let lab = (m ? m[1] : (t.dataPoints[i] && t.dataPoints[i].dataset.label) || "").trim();
+      lab = TIP_SHORT[lab] || lab;
       const val = m ? m[2] : line;
       const raw = t.dataPoints[i] ? t.dataPoints[i].raw : null;
       if ((raw === 0 || raw === null) && (t.body || []).length > 1) return "";
@@ -316,7 +321,8 @@
     }).join("");
     const foot = (t.footer || []).join("\n").split("\n").filter(Boolean);
     const hint = foot.filter((f) => /^Klick/.test(f)), facts = foot.filter((f) => !/^Klick/.test(f));
-    el.innerHTML = `${(t.title || []).filter(Boolean).length ? `<div class="ct-title">${EB.esc(t.title.join(" "))}</div>` : ""}${rows}
+    const ttl = (t.title || []).filter(Boolean).map((x) => TIP_SHORT[x] || x).join(" ");
+    el.innerHTML = `${ttl ? `<div class="ct-title">${EB.esc(ttl)}</div>` : ""}${rows}
       ${facts.length ? `<div class="ct-facts">${facts.map(EB.esc).join("<br>")}</div>` : ""}${hint.length ? `<div class="ct-hint">${EB.esc(hint.join(" · "))}</div>` : ""}`;
     const r = ctx.chart.canvas.getBoundingClientRect();
     const w = el.offsetWidth, h = el.offsetHeight;
