@@ -413,7 +413,8 @@
       prev.tooltip && prev.tooltip.setActiveElements([], { x: 0, y: 0 });
       const t = document.getElementById("ctip"); if (t) t.style.opacity = 0;
       prev.$ebRow = cfg.options && cfg.options.plugins && cfg.options.plugins.ebRow ? Object.assign({}, cfg.options.plugins.ebRow) : null;
-      prev.update(cfg.options && cfg.options.animation === false ? "none" : undefined);
+      prev.stop();                 // cancel any running animation, then apply the new state at once (no half-drawn bars)
+      prev.update("none");
       return prev;
     }
     if (prev) prev.destroy();
