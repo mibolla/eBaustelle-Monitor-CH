@@ -532,6 +532,27 @@
       },
     });
     new Home().addTo(map);
+    // background switch: quiet map  <->  aerial image (swisstopo SWISSIMAGE), remembered per viewer
+    const aerial = L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg", {
+      maxZoom: 19, maxNativeZoom: 19, className: "eb-aerial", attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo SWISSIMAGE</a>' });
+    const ICON_PHOTO = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 12l3.6-4 2.6 2.8 1.8-1.9 3 3.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="11" cy="6" r="1.2" fill="currentColor"/></svg>';
+    const ICON_MAP = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z M5.5 2v10 M10.5 4v10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+    const Bg = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd() {
+        const b = L.DomUtil.create("a", "leaflet-bar eb-home eb-bg"); b.href = "#"; b.setAttribute("role", "button");
+        const sync = () => { const on = map.hasLayer(aerial);
+          // aerial tiles are only seam-free at whole zoom levels
+          map.options.zoomSnap = on ? 1 : 0.1; map.options.zoomDelta = on ? 1 : 0.5;
+          if (on && Math.abs(map.getZoom() - Math.round(map.getZoom())) > 0.01) map.setZoom(Math.round(map.getZoom()), { animate: false }); b.innerHTML = on ? ICON_MAP : ICON_PHOTO; b.title = on ? "Karte als Hintergrund" : "Luftbild als Hintergrund"; b.setAttribute("aria-pressed", on); map.getContainer().classList.toggle("eb-is-aerial", on); };
+        L.DomEvent.on(b, "click", (e) => { L.DomEvent.stop(e); const on = !map.hasLayer(aerial); EB.store.set("aerial", on); on ? aerial.addTo(map) : aerial.remove(); sync(); });
+        L.DomEvent.disableClickPropagation(b);
+        if (EB.store.get("aerial", false)) aerial.addTo(map);
+        setTimeout(sync, 0);
+        return b;
+      },
+    });
+    new Bg().addTo(map);
     L.control.scale({ imperial: false, position: "bottomleft", maxWidth: 110 }).addTo(map);
     map.getContainer().classList.add("eb-map");
     return map;
