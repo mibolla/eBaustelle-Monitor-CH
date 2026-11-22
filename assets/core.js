@@ -963,9 +963,10 @@
       .map(([k, v]) => ({ group: "Netzbetreiber", icon: EB.logo(k, 18), label: k, right: `${v.n} Gem. · ${EB.n0(v.pop)} Einw.`, value: k }));
   };
 
-  /* one size code for all GWR markers: circle AREA proportional to floor area (radius ∝ √m²), non-linear, capped */
+  /* one size code for all GWR markers: circle area ∝ √(floor area), non-linear, capped */
   EB.FA_STEPS = [500, 2000, 10000, 40000];
-  EB.faR = (fa) => (fa ? Math.min(18, 1.6 + Math.sqrt(fa) / 13) : 1.6);
+  // circle AREA ∝ √(floor area)  ⇒  radius ∝ (floor area)^¼ ; 500 m² keeps r ≈ 3.3 px
+  EB.faR = (fa) => (fa ? Math.max(1.6, Math.min(12, 3.32 * Math.pow(fa / 500, 0.25))) : 1.6);
   EB.sizeLegend = function () {
     const vals = EB.FA_STEPS, rMax = EB.faR(vals[vals.length - 1]), base = rMax * 2 + 2, colW = Math.max(46, rMax * 2 + 8);
     const lab = (v) => (v >= 1000 ? EB.n0(v / 1000) + "k" : v) + " m²";
@@ -973,7 +974,7 @@
       return `<circle cx="${cx}" cy="${base - r}" r="${r}" fill="var(--text-2)" fill-opacity=".14" stroke="var(--text-2)" stroke-width="1"/>
         <text x="${cx}" y="${base + 12}" font-size="10.5" text-anchor="middle" fill="var(--text-2)">${lab(v)}</text>`; }).join("");
     const W = colW * vals.length;
-    return `<span class="sizeleg" title="Kreisfläche proportional zur Geschossfläche (eine Skala für alle Bauphasen)"><span class="muted">Geschossfläche</span>
+    return `<span class="sizeleg" title="Kreisfläche ∝ Wurzel der Geschossfläche (eine Skala für alle Bauphasen)"><span class="muted">Geschossfläche</span>
       <svg width="${W}" height="${base + 15}" viewBox="0 0 ${W} ${base + 15}" aria-label="Grössenlegende Geschossfläche">${body}</svg></span>`;
   };
 
