@@ -325,12 +325,7 @@
         if (this.opts.card) {
           this._sel = p; this._draw();
           const m = this._map;
-          const pop = L.popup({ className: "eb-pop", maxWidth: 390, minWidth: 340, autoPanPadding: [24, 24], offset: [0, -4] })
-            .setLatLng([p.lat, p.lon]).setContent(this.opts.card(p)).openOn(m);
-          const el = pop.getElement();
-          const z = el && el.querySelector("[data-zoom]");
-          if (z) z.onclick = (ev) => { ev.preventDefault(); m.flyTo([p.lat, p.lon], Math.max(m.getZoom(), 17), { duration: 0.7 }); };
-          m.once("popupclose", () => { this._sel = null; this._draw(); });
+          EB.showCard(m, [p.lat, p.lon], this.opts.card(p), () => { this._sel = null; this._draw(); });
         } else if (this.opts.onClick) this.opts.onClick(p, e);
       },
       _hover(e) {
@@ -495,4 +490,43 @@
       <div class="pc-btns">${EB.btn("Projektdetails", EB.lnk.proj(p.id), "primary")}${EB.btn("Zoomen", "", "zoom")}${EB.btn("GWR-Karte am Ort", EB.lnk.gwrMap(p.lat, p.lon))}</div>
       <div class="pc-src">Quelle: simap.ch · ${p.nn} Publikationen</div></div>`;
   };
+
+  /* floating info card: lives in <body> so the map frame never clips it; opens above the point,
+     flips below / sideways to stay inside the browser window, follows the point on pan/zoom */
+  EB.showCard = function (map, latlng, html, onClose) {
+    EB.closeCard();
+    const el = document.createElement("div");
+    el.className = "ebcard"; el.setAttribute("role", "dialog");
+    el.innerHTML = `<button class="ebcard-x" aria-label="Schliessen">✕</button>${html}<span class="ebcard-tip"></span>`;
+    document.body.append(el);
+    const place = () => {
+      const r = map.getContainer().getBoundingClientRect();
+      const pt = map.latLngToContainerPoint(latlng);
+      const x = r.left + pt.x, y = r.top + pt.y;
+      const inside = pt.x >= 0 && pt.y >= 0 && pt.x <= r.width && pt.y <= r.height;
+      el.style.visibility = inside ? "visible" : "hidden";
+      const w = el.offsetWidth, h = el.offsetHeight, gap = 14, vw = innerWidth, vh = innerHeight;
+      let below = y - h - gap < 8 && y + h + gap < vh - 8;
+      let top = below ? y + gap : y - h - gap;
+      let left = Math.min(Math.max(8, x - w / 2), vw - w - 8);
+      el.classList.toggle("below", below);
+      el.style.left = left + "px"; el.style.top = Math.max(8, top) + "px";
+      el.querySelector(".ebcard-tip").style.left = Math.min(Math.max(14, x - left), w - 14) + "px";
+    };
+    const onKey = (e) => { if (e.key === "Escape") EB.closeCard(); };
+    const onMapClick = () => EB.closeCard();
+    map.on("move zoom resize", place);
+    window.addEventListener("scroll", place, true); window.addEventListener("resize", place); document.addEventListener("keydown", onKey);
+    setTimeout(() => map.on("click", onMapClick), 0);
+    EB._card = { el, close: () => {
+      map.off("move zoom resize", place); map.off("click", onMapClick);
+      window.removeEventListener("scroll", place, true); window.removeEventListener("resize", place); document.removeEventListener("keydown", onKey);
+      el.remove(); onClose && onClose();
+    } };
+    el.querySelector(".ebcard-x").onclick = () => EB.closeCard();
+    const z = el.querySelector("[data-zoom]");
+    if (z) z.onclick = (ev) => { ev.preventDefault(); map.flyTo(latlng, Math.max(map.getZoom(), 17), { duration: 0.7 }); };
+    place();
+  };
+  EB.closeCard = () => { if (EB._card) { const c = EB._card; EB._card = null; c.close(); } };
 })();

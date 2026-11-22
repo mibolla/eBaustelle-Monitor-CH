@@ -192,3 +192,10 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 :root[data-theme="dark"]{--map-bg:#151514;--map-land:#22232a;--map-muni:#2f313a;--map-canton:#4a4d58;--map-water:#1a2330}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--map-bg:#151514;--map-land:#22232a;--map-muni:#2f313a;--map-canton:#4a4d58;--map-water:#1a2330}}
 .eb-map.leaflet-container{background:var(--map-bg)}
+/* floating map card */
+.ebcard{position:fixed;z-index:2600;width:min(410px,calc(100vw - 16px));background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.2)}
+.ebcard .pcard{padding-right:30px}
+.ebcard-x{position:absolute;top:8px;right:8px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:6px}
+.ebcard-x:hover{background:var(--surface-2);color:var(--text)}
+.ebcard-tip{position:absolute;bottom:-7px;width:12px;height:12px;margin-left:-6px;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border);transform:rotate(45deg)}
+.ebcard.below .ebcard-tip{bottom:auto;top:-7px;transform:rotate(225deg)}
