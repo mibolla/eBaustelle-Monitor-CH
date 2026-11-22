@@ -129,7 +129,7 @@
   };
 
   /* ---------------- filters */
-  const DEF = { y0: 2016, y1: 2026, cantons: [], dso: "", sizes: [], procs: [], types: [], roles: [], firm: "", nofw: true, onlyval: false, q: "", emach: false, co2m: false, util: false, grid: false };
+  const DEF = { y0: 2016, y1: 2026, cantons: [], muns: [], dso: "", sizes: [], procs: [], types: [], roles: [], firm: "", nofw: true, onlyval: false, q: "", emach: false, co2m: false, util: false, grid: false };
   EB.DEF = DEF;
   EB.filters = Object.assign(JSON.parse(JSON.stringify(DEF)), EB.store.get("filters", {}));
   EB.saveFilters = () => EB.store.set("filters", EB.filters);
@@ -137,6 +137,7 @@
     f = f || EB.filters;
     if (p.year < f.y0 || p.year > f.y1) return false;
     if (f.cantons.length && !f.cantons.includes(p.canton)) return false;
+    if (f.muns && f.muns.length && !f.muns.includes(p.munName + "|" + p.canton)) return false;
     if (f.dso && !(p.dsoName || "").includes(f.dso)) return false;
     if (f.sizes.length && !f.sizes.includes(p.size)) return false;
     if (f.procs.length && !f.procs.includes(p.proc)) return false;
@@ -149,7 +150,7 @@
     if (f.co2m && !p.co2m) return false;
     if (f.util && !p.util) return false;
     if (f.grid && !p.grid) return false;
-    if (f.q) { const q = f.q.toLowerCase(); if (!(p.title.toLowerCase().includes(q) || (p.authName || "").toLowerCase().includes(q) || (p.munName || "").toLowerCase().includes(q))) return false; }
+    if (f.q) { const q = f.q.toLowerCase(); if (!(p.title.toLowerCase().includes(q) || (p.authName || "").toLowerCase().includes(q))) return false; }
     return true;
   };
   EB._firmSet = function (name) {
@@ -194,6 +195,13 @@
     const P = window.PROJ;
     const dsoList = [...new Set(P.dso.flatMap((d) => (d || "").split(" | ")).filter(Boolean))].sort();
     const firmList = EB.firms().slice(0, 4000).map((x) => x.name);
+    const MUNS = [...new Set(EB.projects().filter((p) => p.munName && p.canton).map((p) => p.munName + "|" + p.canton))].sort((a, b) => a.localeCompare(b, "de"));
+    const munOptions = () => MUNS.filter((m) => !f.cantons.length || f.cantons.includes(m.split("|")[1])).map((m) => { const [n, k] = m.split("|"); return `<option value="${EB.esc(n)} (${k})">`; }).join("");
+    const dropMunsOutside = () => {
+      if (!f.cantons.length || !f.muns.length) return;
+      const out = f.muns.filter((m) => !f.cantons.includes(m.split("|")[1]));
+      if (out.length) { f.muns = f.muns.filter((m) => !out.includes(m)); EB.toast(`Gemeinde-Filter ${out.map((m) => m.split("|")[0]).join(", ")} entfernt – liegt nicht im gewählten Kanton`); }
+    };
     function render() {
       const yr = EB.YEARS.map((y) => {
         const cls = y === f.y0 || y === f.y1 ? "on" : y > f.y0 && y < f.y1 ? "inrange" : "";
@@ -205,12 +213,14 @@
         <div class="fgroup"><span class="flabel">Kanton</span><div class="dd" id="ddC"><button class="chip ${f.cantons.length ? "on" : ""}" id="ddCb">${f.cantons.length ? f.cantons.join(", ") : "alle"} ▾</button>
           <div class="panel"><div class="cgrid">${CANTONS.map((c) => `<label><input type="checkbox" value="${c}" ${f.cantons.includes(c) ? "checked" : ""}>${c}</label>`).join("")}</div>
           <div style="margin-top:6px;display:flex;gap:6px"><button class="chip" id="cAll">keine Auswahl</button></div></div></div></div>
+        <div class="fgroup"><span class="flabel">Gemeinde</span>${(f.muns || []).map((m) => { const [n, k] = m.split("|"); return `<button class="chip on" data-mun="${EB.esc(m)}" title="Entfernen">${EB.esc(n)} (${k}) ✕</button>`; }).join("")}
+          <input type="text" list="munL" id="fMun" placeholder="${f.muns && f.muns.length ? "+ weitere…" : "Gemeinde…"}" style="width:150px"><datalist id="munL">${munOptions()}</datalist></div>
         <div class="fgroup"><span class="flabel">Versorger</span><input type="text" list="dsoL" id="fDso" placeholder="Netzbetreiber…" value="${EB.esc(f.dso)}" style="width:190px"><datalist id="dsoL">${dsoList.map((d) => `<option value="${EB.esc(d)}">`).join("")}</datalist></div>
         <div class="fgroup"><span class="flabel">Typ</span>${chips("types", P.types)}</div>
         <div class="fgroup"><span class="flabel">Grösse</span>${chips("sizes", P.sizes.map((s) => s.split(" ")[0] === "ohne" ? "ohne Wert" : s.split(" ")[0]), null)}</div>
         <div class="fgroup"><span class="flabel">Vergabeart</span>${chips("procs", P.procs.slice(0, 4), P.procs.slice(0, 4).map((p) => EB.PROC_LABEL[p]))}</div>
         <div class="fgroup"><span class="flabel">Firma</span><input type="text" list="firmL" id="fFirm" placeholder="Bau-/Planungsfirma…" value="${EB.esc(f.firm)}" style="width:210px"><datalist id="firmL">${firmList.map((d) => `<option value="${EB.esc(d)}">`).join("")}</datalist></div>
-        ${opts.search ? `<div class="fgroup"><input type="search" id="fQ" placeholder="Suche Titel, Vergabestelle, Ort…" value="${EB.esc(f.q)}"></div>` : ""}
+        ${opts.search ? `<div class="fgroup"><input type="search" id="fQ" placeholder="Suche in Titel oder Vergabestelle…" value="${EB.esc(f.q)}"></div>` : ""}
         <div class="fgroup"><span class="flabel">Rolle</span><div class="dd" id="ddR"><button class="chip ${f.roles.length ? "on" : ""}" id="ddRb">${f.roles.length ? f.roles.map((i) => P.role_label[P.roles[i]]).join(", ") : "alle"} ▾</button>
           <div class="panel">${P.roles.map((r, i) => `<label><input type="checkbox" value="${i}" ${f.roles.includes(i) ? "checked" : ""}>${P.role_label[r]}</label>`).join("")}</div></div></div>
         <div class="fgroup"><span class="flabel">Merkmale</span>${[["emach", "E-Maschinen"], ["co2m", "CO₂/Nachhaltigkeit"], ["util", "Versorger als Bauherr"], ["grid", "Netz/Ladeinfra"]].map(([k, l]) => `<button class="chip ${f[k] ? "on" : ""}" data-flag="${k}">${l}</button>`).join("")}</div>
@@ -232,8 +242,17 @@
       }));
       const dd = el.querySelector("#ddC");
       el.querySelector("#ddCb").onclick = (e) => { e.stopPropagation(); dd.classList.toggle("open"); };
-      dd.querySelectorAll("input").forEach((i) => (i.onchange = () => { f.cantons = [...dd.querySelectorAll("input:checked")].map((x) => x.value); changed(false); el.querySelector("#ddCb").textContent = (f.cantons.length ? f.cantons.join(", ") : "alle") + " ▾"; el.querySelector("#ddCb").classList.toggle("on", !!f.cantons.length); }));
+      dd.querySelectorAll("input").forEach((i) => (i.onchange = () => { f.cantons = [...dd.querySelectorAll("input:checked")].map((x) => x.value); const nm = f.muns.length; dropMunsOutside(); el.querySelector("#munL").innerHTML = munOptions(); if (f.muns.length !== nm) { changed(); return; } changed(false); el.querySelector("#ddCb").textContent = (f.cantons.length ? f.cantons.join(", ") : "alle") + " ▾"; el.querySelector("#ddCb").classList.toggle("on", !!f.cantons.length); }));
       el.querySelector("#cAll").onclick = () => { f.cantons = []; changed(); };
+      el.querySelector("#fMun").onchange = (e) => {
+        const m = e.target.value.trim().match(/^(.*) \(([A-Z]{2})\)$/);
+        if (!m || !MUNS.includes(m[1] + "|" + m[2])) { e.target.value = ""; return; }
+        const key = m[1] + "|" + m[2];
+        if (!f.muns.includes(key)) f.muns.push(key);
+        if (f.cantons.length && !f.cantons.includes(m[2])) { EB.toast(`Kantons-Filter ${f.cantons.join(", ")} entfernt – ${m[1]} liegt in ${m[2]}`); f.cantons = []; }
+        changed();
+      };
+      el.querySelectorAll("[data-mun]").forEach((b) => (b.onclick = () => { f.muns = f.muns.filter((x) => x !== b.dataset.mun); changed(); }));
       el.querySelector("#fDso").onchange = (e) => { f.dso = e.target.value.trim(); changed(); };
       el.querySelector("#fFirm").onchange = (e) => { f.firm = e.target.value.trim(); changed(); };
       if (opts.search) { let t; el.querySelector("#fQ").oninput = (e) => { clearTimeout(t); t = setTimeout(() => { f.q = e.target.value.trim(); changed(false); }, 250); }; }
@@ -612,7 +631,7 @@
       const geo = ps.find((p) => p.lat && p.geo <= 2);
       return `<div class="pc-top"><span class="pc-status" style="--c:var(--s3)">Gemeinde</span></div><div class="pc-title">${EB.esc(v)} ${EB.esc(x || "")}</div>
         <dl class="pc-kv">${stat("Projekte", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(val))}${stat("Netzbetreiber", EB.esc((ps[0] || {}).dsoName || ""))}</dl>
-        <div class="pc-btns">${act("Projekte anzeigen →", () => goFilter({ q: v, cantons: x ? [x] : [] }, "projects.html"), "primary")}${act("Übersicht filtern", () => goFilter({ q: v, cantons: x ? [x] : [] }, "index.html"))}${geo ? EB.btn("GWR-Karte", EB.lnk.gwrMap(geo.lat, geo.lon)) : ""}</div>`;
+        <div class="pc-btns">${act("Projekte anzeigen →", () => goFilter({ muns: [v + "|" + x] }, "projects.html"), "primary")}${act("Übersicht filtern", () => goFilter({ muns: [v + "|" + x] }, "index.html"))}${geo ? EB.btn("GWR-Karte", EB.lnk.gwrMap(geo.lat, geo.lon)) : ""}</div>`;
     }
     if (type === "dso") {
       const ps = P.filter((p) => (p.dsoName || "").split(" | ").includes(v));

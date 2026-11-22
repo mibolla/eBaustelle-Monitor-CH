@@ -18,6 +18,7 @@
     <p>Alle Gebäude im eidg. Gebäude- und Wohnungsregister (BFS, Export 20.11.2026) mit Status projektiert, bewilligt oder im Bau, sowie Fertigstellungen seit 2016. Umfasst private und öffentliche Bauherren – im Gegensatz zu simap, das nur öffentliche Vergaben zeigt. Hochbau only; Tiefbau ist im GWR nicht erfasst.</p></div></div>
   <div class="filters">
     <div class="fgroup"><span class="flabel">Kanton</span><select id="fC"><option value="">alle</option></select></div>
+    <div class="fgroup"><span class="flabel">Gemeinde</span><input type="text" id="fM" list="mL" placeholder="Gemeinde…" style="width:170px"><datalist id="mL"></datalist><button class="chip on" id="fMx" style="display:none"></button></div>
     <div class="fgroup"><span class="flabel">Status</span><span id="fS"></span></div>
     <div class="fgroup"><span class="flabel">Gebäudegrösse</span><select id="fZ"><option value="0">alle</option><option value="500">≥ 500 m² Geschossfl.</option><option value="1500">≥ 1500 m²</option><option value="5000">≥ 5000 m²</option></select></div>
     <div class="fgroup"><span class="flabel">Versorger</span><input type="text" id="fD" list="dL" placeholder="Netzbetreiber…" style="width:200px"><datalist id="dL"></datalist></div>
@@ -53,11 +54,20 @@ EB.shell("gwr.html"); EB.chartDefaults();
 ["i1","i2","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
 const G = window.GWR, GC = G.cols, MUN = window.MUN;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
-const st = { sel:[0,1,2], c:"", z:0, d:"", cls:null, sb:null };
+const st = { sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
 // canton and grid operator are linked: if a choice leaves no buildings, drop the other filter and say so
 const anyPipe = (c, d) => GL.some(g=>g.st<3&&(!c||g.canton===c)&&(!d||g.dso.includes(d)));
-function setCanton(c){ if (c && st.d && !anyPipe(c, st.d)) { EB.toast(`Versorger-Filter «${st.d}» entfernt – keine Baustellen dieses Netzbetreibers in ${c}`); st.d=""; document.getElementById("fD").value=""; }
-  st.c=c; document.getElementById("fC").value=c; draw(); }
+const GMUNS = [...new Set(GL.filter(g=>g.st<3).map(g=>g.munName+"|"+g.canton))].sort((a,b)=>a.localeCompare(b,"de"));
+function munOpts(){ document.getElementById("mL").innerHTML = GMUNS.filter(m=>!st.c||m.endsWith("|"+st.c)).map(m=>{const [n,k]=m.split("|"); return `<option value="${EB.esc(n)} (${k})">`;}).join(""); }
+function setMun(m){ st.m=m; const b=document.getElementById("fMx"), i=document.getElementById("fM");
+  if (m) { const [n,k]=m.split("|"); b.textContent=`${n} (${k}) ✕`; b.style.display=""; i.style.display="none"; if (st.c && st.c!==k) { EB.toast(`Kantons-Filter ${st.c} entfernt – ${n} liegt in ${k}`); st.c=""; document.getElementById("fC").value=""; munOpts(); } }
+  else { b.style.display="none"; i.style.display=""; i.value=""; }
+  draw(); }
+document.getElementById("fM").onchange=e=>{ const m=e.target.value.trim().match(/^(.*) \(([A-Z]{2})\)$/); if (m && GMUNS.includes(m[1]+"|"+m[2])) setMun(m[1]+"|"+m[2]); else e.target.value=""; };
+document.getElementById("fMx").onclick=()=>setMun("");
+function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemeinde-Filter ${st.m.split("|")[0]} entfernt – liegt nicht in ${c}`); st.m=""; document.getElementById("fMx").style.display="none"; const i=document.getElementById("fM"); i.style.display=""; i.value=""; }
+  if (c && st.d && !anyPipe(c, st.d)) { EB.toast(`Versorger-Filter «${st.d}» entfernt – keine Baustellen dieses Netzbetreibers in ${c}`); st.d=""; document.getElementById("fD").value=""; }
+  st.c=c; document.getElementById("fC").value=c; munOpts(); draw(); }
 function setDso(d){ if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
   st.d=d; document.getElementById("fD").value=d; draw(); }
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
@@ -74,7 +84,7 @@ function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
   const inBin = (g,i) => i===5 ? !g.fa : g.fa>=bins[i][0]&&g.fa<bins[i][1];
-  const pass = (g, skip, allSt) => g.st<3&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
+  const pass = (g, skip, allSt) => g.st<3&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.m||g.munName+"|"+g.canton===st.m)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
   const pipe = GL.filter(g=>pass(g));
   const pipeC = GL.filter(g=>pass(g,"c",true)), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
   const tag = [st.cls!=null?"Kategorie: "+G.classes[st.cls]:"", st.sb!=null?"Grösse: "+(bins[st.sb]||[0,0,"unbekannt"])[2]:""].filter(Boolean);
@@ -121,7 +131,7 @@ const selDso = (d) => setDso(st.d===d ? "" : d);
 function drawFlex(){
   const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value, inclP = document.getElementById("fpProj").checked;
   const acc = {};
-  GL.forEach(g=>{ if (g.st>2 || (g.st===0&&!inclP) || !(g.fa>=mn) || (st.c&&g.canton!==st.c)) return; const op=(g.dso||"").split(" | ")[0]; if(!op) return;
+  GL.forEach(g=>{ if (g.st>2 || (g.st===0&&!inclP) || !(g.fa>=mn) || (st.c&&g.canton!==st.c) || (st.m&&g.munName+"|"+g.canton!==st.m)) return; const op=(g.dso||"").split(" | ")[0]; if(!op) return;
     const o = acc[op] = acc[op] || {op, n:0, big:0, lat:0, lon:0, fa:0, sites:[]}; o.n++; if (g.fa>=big) o.big++; o.lat+=g.lat; o.lon+=g.lon; o.fa+=g.fa; o.sites.push(g); });
   FP = Object.values(acc).sort((a,b)=>b.n-a.n);
   const top = FP.slice(0,25); if (st.d && !top.find(o=>o.op===st.d) && acc[st.d]) top.push(acc[st.d]);
@@ -148,7 +158,7 @@ document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
 document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
 document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrInfo(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
-chips(); draw(); document.addEventListener("eb-redraw", draw);
+munOpts(); chips(); draw(); document.addEventListener("eb-redraw", draw);
 </script>
 </body>
 </html>

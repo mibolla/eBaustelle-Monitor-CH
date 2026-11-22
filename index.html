@@ -95,15 +95,16 @@ function draw(){
           labels:{generateLabels:ch=>PR.types.map((t,i)=>({text:t,fillStyle:EB.dim(tc[i],!f.types.length||f.types.includes(i)),strokeStyle:"transparent",datasetIndex:i,fontColor:EB.css("--text-2"),borderRadius:3}))}}}}});
 
   // 2 canton
-  const BC = base("cantons"); const byC = {};
+  const BC = base("cantons","muns"); const byC = {}; const munC = new Set(f.muns.map(m=>m.split("|")[1]));
   BC.forEach(p=>{ if(p.canton&&p.geo<=3) byC[p.canton]=(byC[p.canton]||0)+(p.value||0); });
   let cs = Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  f.cantons.forEach(c=>{ if(!cs.find(x=>x[0]===c)) cs.push([c,byC[c]||0]); });
+  [...f.cantons,...munC].forEach(c=>{ if(!cs.find(x=>x[0]===c)) cs.push([c,byC[c]||0]); });
   EB.chart("cCanton",{type:"bar",data:{labels:cs.map(c=>c[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:cs.map(c=>c[1]),
-      backgroundColor:cs.map(c=>EB.dim(EB.css("--s1"),!f.cantons.length||f.cantons.includes(c[0])))})]},
+      backgroundColor:cs.map(c=>EB.dim(EB.css("--s1"),(!f.cantons.length&&!munC.size)||f.cantons.includes(c[0])||munC.has(c[0])))})]},
     options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Kanton filtern"}}},
       onClick:(e,els)=>{ if(!els.length) return; const c=cs[els[0].index][0];
         if (f.dso && !f.cantons.includes(c) && !P.some(p=>p.canton===c&&(p.dsoName||"").includes(f.dso))) { EB.toast(`Versorger-Filter «${f.dso}» entfernt – keine Projekte dieses Netzbetreibers in ${c}`); f.dso=""; }
+        if (f.muns.length && f.muns.some(m=>m.split("|")[1]!==c) && !f.cantons.includes(c)) { EB.toast("Gemeinde-Filter entfernt – Auswahl liegt nicht in "+c); f.muns=[]; }
         EB.toggleIn("cantons",c,e); }}});
 
   // 3 size (ordinal ramp)
