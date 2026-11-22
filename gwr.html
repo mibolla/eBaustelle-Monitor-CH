@@ -45,7 +45,7 @@
         <div class="fp-head"><span class="legend" id="fpL"></span><input type="search" id="fpQ" placeholder="Netzbetreiber suchen…" aria-label="Netzbetreiber suchen"><span class="small muted" id="fpN"></span></div>
         <div id="fpScroll" class="fp-scroll"><div id="fpInner" style="position:relative"><canvas id="cFP"></canvas></div></div>
       </div>
-      <div><div id="fpMap" class="map" style="height:620px"></div><div class="legend" id="fpLeg" style="margin-top:6px"></div></div>
+      <div><div id="fpMap" class="map"></div><div class="legend" id="fpLeg" style="margin-top:6px"></div></div>
     </div>
   </section>
   <section class="grid g3" style="margin-top:14px">
@@ -162,7 +162,18 @@ const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
-let FPSEL = null, FPFOCUS = null;   // FPFOCUS = {bfs, name, canton, op}
+let FPSEL = null, FPFOCUS = null;
+/* flex-pool layout: map with the same size as the canton map above; operator list ends exactly at the map bottom */
+function fpAlign(){
+  const m = document.getElementById("map"), fm = document.getElementById("fpMap"), sc = document.getElementById("fpScroll");
+  if (!m || !fm || !sc) return;
+  if (fm.offsetHeight !== m.offsetHeight) { fm.style.height = m.offsetHeight + "px"; fpMap.invalidateSize(); }
+  const stacked = getComputedStyle(document.getElementById("fpLay")).gridTemplateColumns.split(" ").length < 2;
+  const h = stacked ? 440 : Math.round(fm.getBoundingClientRect().bottom - sc.getBoundingClientRect().top);
+  sc.style.height = Math.max(260, h) + "px";
+  if (EB.charts.cFP) EB.charts.cFP.resize();
+}
+window.addEventListener("resize", () => { clearTimeout(window._fpA); window._fpA = setTimeout(fpAlign, 120); });   // FPFOCUS = {bfs, name, canton, op}
 function fpMapRender(fit){
   const sel = FPSEL, gc = gcol(), [o1] = ORANGE();
   // with an operator selected, the map shows only its network area and building sites (no operator circles)
@@ -310,7 +321,7 @@ document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
 document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
 document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrInfo(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
-munOpts(); chips(); draw(); document.addEventListener("eb-redraw", draw);
+munOpts(); chips(); draw(); fpAlign(); setTimeout(fpAlign, 300); document.addEventListener("eb-redraw", draw);
 </script>
 </body>
 </html>
