@@ -30,8 +30,8 @@
   /* ---------------- shell: top bar + footer + theme */
   const PAGES = [["index.html", "Übersicht"], ["projects.html", "Projekte"], ["map.html", "Karte"], ["gwr.html", "GWR-Pipeline"], ["firms.html", "Firmen"], ["sources.html", "Quellen & Methoden"]];
   EB.shell = function (active) {
-    // dark is the default; a viewer's own choice (toggle) is remembered per browser
-    document.documentElement.setAttribute("data-theme", EB.store.get("theme", "dark"));
+    // light is the default; a viewer's own choice (toggle) is remembered per browser
+    document.documentElement.setAttribute("data-theme", EB.store.get("theme", "light"));
     const bar = document.createElement("header");
     bar.className = "topbar";
     bar.innerHTML = `<div class="in"><a class="brand" href="index.html"><span class="dot"></span>eBaustelle · Baustellen-Monitor CH</a>
@@ -40,7 +40,7 @@
       <button class="iconbtn" id="themeBtn" title="Hell/Dunkel">◐</button></div>`;
     document.body.prepend(bar);
     document.getElementById("themeBtn").onclick = () => {
-      const cur = document.documentElement.getAttribute("data-theme") || "dark";
+      const cur = document.documentElement.getAttribute("data-theme") || "light";
       const nx = cur === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", nx); EB.store.set("theme", nx);
       document.dispatchEvent(new Event("eb-theme"));
