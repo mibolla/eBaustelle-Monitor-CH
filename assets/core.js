@@ -72,6 +72,8 @@
     ebp: ["EBP (2025) Wege zu Netto-Null für Baumaschinen in der Schweiz, S. 10 & 14 (Projektunterlage, nicht öffentlich verlinkt)", "https://www.ebp.ch"],
     bafuGhg: ["BAFU – Treibhausgasinventar der Schweiz (Quelle der 464 kt CO₂e Baumaschinen)", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html"],
     methods: ["Quellen & Methoden (dieses Dashboard)", "sources.html"],
+    bfsGeo: ["BFS GEOSTAT – generalisierte Gemeindegrenzen 2025 (Hintergrundkarte)", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html"],
+    swisstopo: ["swisstopo – Landeskarte grau (Detail ab Zoom 12)", "https://www.swisstopo.admin.ch"],
   };
   EB.INFO = {
     k_projects: { t: "Baustellen-Projekte", b: "Anzahl Projekte nach Filter. Ein <b>Projekt</b> ist eine Gruppe von simap-Publikationen (Ausschreibung, Zuschlag, Lose/BKP-Gewerke, Planer- und Wettbewerbsverfahren), die zum selben Bauvorhaben gehören. Gruppierung: gleiche simap-Projekt-ID, gleicher Basistitel nach Entfernen von BKP/NPK/Los-Angaben bei gleicher Vergabestelle, gemeinsame Programmnummern (ASTRA MP-, BBL b-, Stadt Zürich BAV-Nummern) sowie unscharfer Titelabgleich innerhalb der Vergabestelle (Jaccard ≥ 0.6, ≥ 2 gemeinsame Kennwörter).", s: ["simapNew", "simapArch", "methods"] },
@@ -79,18 +81,18 @@
     k_co2: { t: "CO₂ Baumaschinen (Schätzung)", b: "Grobe Schätzung der direkten Emissionen von Baumaschinen auf der Baustelle: Zuschlagswert Bauleistungen × <b>6.85 t CO₂e pro Mio CHF</b>. Faktor = 464'067 t CO₂e Baumaschinen 2023 (BAFU, zitiert in EBP 2025 S.14) ÷ CHF 67.8 Mrd Bauausgaben 2023 (BFS). Annahme: Emissionen proportional zum Bauvolumen; Tiefbau liegt real eher darüber, Ausbaugewerke darunter. Nicht enthalten: Transportlogistik (in den Piloten 56–70 % der Restemissionen) und graue Energie der Materialien.", s: ["ebp", "bafuGhg", "bfs", "methods"] },
     k_elec: { t: "Strombedarf bei Elektrifizierung (Schätzung)", b: "Indikativer Strombedarf, falls die Baumaschinen elektrisch betrieben würden: Zuschlagswert Bauleistungen × <b>7.4 MWh pro Mio CHF</b>. Faktor = > 500 GWh/a Strombedarf Baumaschinen 2050 im ZERO-E-Szenario (EBP 2025 S.10) ÷ CHF 67.8 Mrd Bauausgaben 2023. Größenordnung für die Netzplanung, keine Lastspitze.", s: ["ebp", "bfs", "methods"] },
     k_firms: { t: "Beteiligte Firmen", b: "Anzahl unterschiedlicher Zuschlagsempfänger (normalisierter Firmenname ohne Rechtsform) in den gefilterten Projekten. Arbeitsgemeinschaften (ARGE/INGE) zählen als eigene Firma.", s: ["simapNew", "simapArch"] },
-    k_emach: { t: "Hinweis auf E-Baumaschinen / CO₂", b: "Anteil Projekte, deren Publikationstexte (Titel, Beschreibung, Zuschlagsbegründung) E-Baumaschinen, emissionsfreie Baustelle o.ä. erwähnen (DE/FR/IT-Stichwortliste). Zweite Zahl: Erwähnung von CO₂/Nachhaltigkeit allgemein. Untergrenze, da Ausschreibungsunterlagen (PDF) nicht ausgewertet sind.", s: ["methods"] },
+    k_emach: { t: "Hinweis auf E-Baumaschinen / CO₂", b: "Anteil Projekte, deren Publikationstexte (Titel, Beschreibung, Zuschlagsbegründung) E-Baumaschinen, emissionsfreie Baustelle o.ä. erwähnen (DE/FR/IT-Stichwortliste). Zweite Zahl: Erwähnung von CO₂/Nachhaltigkeit allgemein. Untergrenze, da Ausschreibungsunterlagen (PDF) nicht ausgewertet sind.", s: ["simapNew", "simapArch", "methods"] },
     c_year: { t: "Zuschläge nach Jahr und Bauart", b: "Zuschlagssumme je Jahr (Projektjahr = Jahr des ersten Zuschlags). <b>Strukturbruch Juli 2024:</b> Wechsel auf die neue simap-Plattform und revidiertes Beschaffungsrecht (IVöB 2019/BöB) – mehr publizierte Verfahren und freihändige Zuschläge; Jahre davor und danach sind nicht direkt vergleichbar (siehe Quellen & Methoden).", s: ["simapNew", "simapArch", "methods"] },
-    c_canton: { t: "Zuschläge nach Kanton", b: "Kanton des Ausführungsorts (geokodiert aus Ort/PLZ/Adresse; Rückfall: Sitz der Vergabestelle). Projekte ohne Ort sind ausgeschlossen.", s: ["methods"] },
-    c_size: { t: "Grössenklassen", b: "Klassierung nach Zuschlagssumme des Projekts (Bau + Planung): S < 1 Mio, M 1–5, L 5–20, XL 20–100, XXL ≥ 100 Mio CHF. «ohne Wert»: nur Ausschreibung, Wettbewerb ohne Preis oder Zuschlag ohne Preisangabe.", s: ["methods"] },
+    c_canton: { t: "Zuschläge nach Kanton", b: "Kanton des Ausführungsorts (geokodiert aus Ort/PLZ/Adresse; Rückfall: Sitz der Vergabestelle). Projekte ohne Ort sind ausgeschlossen.", s: ["simapNew", "simapArch", "gwr", "methods"] },
+    c_size: { t: "Grössenklassen", b: "Klassierung nach Zuschlagssumme des Projekts (Bau + Planung): S < 1 Mio, M 1–5, L 5–20, XL 20–100, XXL ≥ 100 Mio CHF. «ohne Wert»: nur Ausschreibung, Wettbewerb ohne Preis oder Zuschlag ohne Preisangabe.", s: ["simapNew", "simapArch", "methods"] },
     c_proc: { t: "Vergabeart (Vertragsart)", b: "Verfahrensart gemäss Publikation: offen, selektiv, Einladung, freihändig (Direktvergabe). Bei Projekten mit mehreren Verfahren: häufigste Art.", s: ["simapNew", "simapArch"] },
-    c_firms: { t: "Wichtigste Firmen", b: "Firmen mit der höchsten Zuschlagssumme in den gefilterten Projekten (Rolle aus BKP/CPV/Stichworten abgeleitet). Klick öffnet die Firmenseite.", s: ["methods"] },
-    c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["methods"] },
-    c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["gwrMap", "methods"] },
-    c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom"] },
-    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers (kein Netzgebiet-Polygon). Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom"] },
-    c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten.", s: ["gwr", "gwrMap"] },
-    c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "methods"] },
+    c_firms: { t: "Wichtigste Firmen", b: "Firmen mit der höchsten Zuschlagssumme in den gefilterten Projekten (Rolle aus BKP/CPV/Stichworten abgeleitet). Klick öffnet die Firmenseite.", s: ["simapNew", "simapArch", "methods"] },
+    c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["simapNew", "simapArch", "methods"] },
+    c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
+    c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
+    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers (kein Netzgebiet-Polygon). Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo"] },
+    c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
+    c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
     c_month: { t: "Publikationen pro Monat und Quelle", b: "Kontrolle auf Lücken und Brüche. Archiv: alle Publikationen inkl. Ausschreibungen. Neue Plattform: neueste Publikation je Projekt (plus Lose) – deshalb weniger Ausschreibungen nach 7/2024.", s: ["simapNew", "simapArch"] },
     c_geo: { t: "Geokodierungs-Genauigkeit", b: "GWR-Adresse: Strasse+Nr. im Titel/Ort gefunden und im GWR-Eingangsregister gematcht. PLZ: Postleitzahl des Ausführungsorts. Gemeinde: Gemeinde-/Ortsname im Ort oder Titel. Vergabestelle: Rückfall auf Adresse der Vergabestelle (unsicher).", s: ["gwr", "methods"] },
   };
@@ -263,12 +265,50 @@
     C.defaults.plugins.tooltip.bodyColor = EB.css("--text-2"); C.defaults.plugins.tooltip.borderColor = EB.css("--border"); C.defaults.plugins.tooltip.borderWidth = 1;
     C.defaults.plugins.tooltip.padding = 9; C.defaults.plugins.tooltip.boxPadding = 4;
     C.defaults.maintainAspectRatio = false; C.defaults.animation = { duration: 250 };
+    // forgiving hover: whole column/row of a category, one lean HTML tooltip for every chart
+    C.defaults.interaction = { mode: "index", intersect: false };
+    C.defaults.plugins.tooltip.enabled = false;
+    C.defaults.plugins.tooltip.external = EB.chartTip;
+  };
+  /* lean HTML tooltip shared by all charts */
+  EB.chartTip = function (ctx) {
+    let el = document.getElementById("ctip");
+    if (!el) { el = document.createElement("div"); el.id = "ctip"; el.className = "ctip"; document.body.append(el); }
+    const t = ctx.tooltip;
+    if (!t || t.opacity === 0) { el.style.opacity = 0; return; }
+    const rows = (t.body || []).map((b, i) => {
+      const line = (b.lines || []).join(" ").trim();
+      const m = line.match(/^(.*?):\s(.*)$/);
+      const lab = m ? m[1] : (t.dataPoints[i] && t.dataPoints[i].dataset.label) || "";
+      const val = m ? m[2] : line;
+      const raw = t.dataPoints[i] ? t.dataPoints[i].raw : null;
+      if ((raw === 0 || raw === null) && (t.body || []).length > 1) return "";
+      const col = t.labelColors[i] ? t.labelColors[i].backgroundColor : "transparent";
+      return `<div class="ct-row"><span class="ct-dot" style="background:${col}"></span><span class="ct-lab">${EB.esc(lab)}</span><span class="ct-val">${EB.esc(val)}</span></div>`;
+    }).join("");
+    const foot = (t.footer || []).join("\n").split("\n").filter(Boolean);
+    const hint = foot.filter((f) => /^Klick/.test(f)), facts = foot.filter((f) => !/^Klick/.test(f));
+    el.innerHTML = `${(t.title || []).filter(Boolean).length ? `<div class="ct-title">${EB.esc(t.title.join(" "))}</div>` : ""}${rows}
+      ${facts.length ? `<div class="ct-facts">${facts.map(EB.esc).join("<br>")}</div>` : ""}${hint.length ? `<div class="ct-hint">${EB.esc(hint.join(" · "))}</div>` : ""}`;
+    const r = ctx.chart.canvas.getBoundingClientRect();
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let x = r.left + t.caretX + 14, y = r.top + t.caretY - h / 2;
+    if (x + w > innerWidth - 8) x = r.left + t.caretX - w - 14;
+    y = Math.min(Math.max(8, y), innerHeight - h - 8);
+    el.style.left = x + "px"; el.style.top = y + "px"; el.style.opacity = 1;
   };
   EB.chart = function (id, cfg) {
     if (EB.charts[id]) EB.charts[id].destroy();
     const el = document.getElementById(id); if (!el || !window.Chart) return;
-    if (cfg.options && cfg.options.onClick && !cfg.options.onHover)
-      cfg.options.onHover = (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; };
+    if (cfg.options && cfg.options.onClick) {
+      // click acts on the mark under the cursor (exact segment), falling back to the hovered category
+      const orig = cfg.options.onClick;
+      cfg.options.onClick = (e, els, ch) => {
+        const hit = ch.getElementsAtEventForMode(e.native, "nearest", { intersect: true }, true);
+        orig(e, hit.length ? hit : els.slice(0, 1), ch);
+      };
+      if (!cfg.options.onHover) cfg.options.onHover = (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; };
+    }
     EB.charts[id] = new Chart(el, cfg);
     return EB.charts[id];
   };
@@ -617,4 +657,49 @@
     if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("ent")) { e.preventDefault(); EB.openPop(e.target); }
   });
   window.addEventListener("scroll", (e) => { if (!(e.target.closest && e.target.closest("#ebpop"))) EB.closePop(); }, true);
+
+  /* ---------------- lean card footer for every chart / map / table:
+     kicker above the title, "Wie wird das gemessen?" (expandable), "Quelle: … · Stand …" */
+  const SRC_META = {
+    simapNew: ["simap.ch", "https://www.simap.ch", "21.11.2026"],
+    simapArch: ["archiv.simap.ch", "https://archiv.simap.ch", "bis 30.6.2024"],
+    gwr: ["BFS, Gebäude- und Wohnungsregister (GWR)", "https://www.housing-stat.ch/de/madd/public.html", "20.11.2026"],
+    gwrMap: ["map.geo.admin.ch, GWR-Layer", "https://map.geo.admin.ch/#/map?lang=de&topic=bfs&layers=ch.bfs.gebaeude_wohnungs_register", "aktuell"],
+    elcom: ["ElCom, Strompreise & Netzbetreiber", "https://www.strompreis.elcom.admin.ch", "Tarife 2026"],
+    bfs: ["BFS, Bauausgaben", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/", "2024"],
+    ebp: ["EBP (2025)", "https://www.ebp.ch", "2025"],
+    bfsGeo: ["BFS GEOSTAT, Gemeindegrenzen", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html", "2025"],
+    swisstopo: ["swisstopo, Landeskarte", "https://www.swisstopo.admin.ch", "aktuell"],
+    bafuGhg: ["BAFU, Treibhausgasinventar", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html", "2023"],
+  };
+  const KICKER = {
+    c_year: "simap · Zuschläge", c_map: "simap · Standorte", c_canton: "simap · Kantone", c_size: "simap · Projektgrösse", c_proc: "simap · Vergabeverfahren",
+    c_roles: "simap · Planer & Gewerke", c_util: "ElCom × simap · Netzbetreiber", c_firms: "simap · Firmen", k_value: "simap · Zuschläge",
+    k_emach: "simap · Ausschreibungstexte", k_projects: "simap · Projekte", c_gwr: "GWR · Gebäudestatus", c_flex: "GWR × ElCom · Flex-Pool",
+    c_val: "BFS × simap · Abdeckung", c_month: "simap · Datenqualität", c_geo: "Datenqualität · Geokodierung", k_co2: "Schätzung · CO₂", k_elec: "Schätzung · Strom",
+  };
+  const METHOD_ANCHOR = { c_year: "#break", c_month: "#break", c_proc: "#break", c_val: "#val", c_geo: "#quality", k_co2: "#methods", k_elec: "#methods" };
+  EB.decorateCard = function (card) {
+    if (card.classList.contains("kpi") || card.dataset.dec === "1" && card.querySelector(":scope > .cfoot")) return;
+    const keys = [...new Set([...card.querySelectorAll("[data-info]")].map((b) => b.dataset.info))].filter((k) => EB.INFO[k]);
+    if (!keys.length) return;
+    card.dataset.dec = "1";
+    // header info buttons are replaced by the footer; inline ones (KPI labels, table rows) stay
+    card.querySelectorAll(":scope > .hd > .info, :scope > .hd .info").forEach((b) => { if (!b.closest(".kpi")) b.style.display = "none"; });
+    const hd = card.querySelector(":scope > .hd");
+    if (hd && !card.querySelector(":scope > .kicker") && KICKER[keys[0]]) {
+      const k = document.createElement("div"); k.className = "kicker"; k.textContent = KICKER[keys[0]]; card.insertBefore(k, hd);
+    }
+    const src = [...new Set(keys.flatMap((k) => EB.INFO[k].s || []))].filter((s) => SRC_META[s]);
+    const method = keys.map((k) => `<p>${keys.length > 1 ? `<b>${EB.INFO[k].t}.</b> ` : ""}${EB.INFO[k].b}</p>`).join("");
+    const f = document.createElement("div");
+    f.className = "cfoot";
+    f.innerHTML = `<details><summary>Wie wird das gemessen?</summary><div class="cf-body">${method}<a href="sources.html${METHOD_ANCHOR[keys[0]] || "#methods"}">Methodik im Detail →</a></div></details>
+      <div class="cf-src">Quelle: ${src.map((s) => `<a href="${SRC_META[s][1]}" target="_blank" rel="noopener">${SRC_META[s][0]}</a>`).join(" · ")}${src.length ? " · Stand " + [...new Set(src.map((s) => SRC_META[s][2]))].join(" / ") : ""}</div>`;
+    card.append(f);
+  };
+  EB.decorateAll = () => document.querySelectorAll(".card").forEach((c) => { if (!c.querySelector(":scope > .cfoot")) EB.decorateCard(c); });
+  let decoT;
+  new MutationObserver(() => { clearTimeout(decoT); decoT = setTimeout(EB.decorateAll, 60); }).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener("DOMContentLoaded", () => setTimeout(EB.decorateAll, 0));
 })();
