@@ -283,11 +283,13 @@ document.getElementById("cFP").addEventListener("mouseleave", ()=>fpHover(null,"
 function fpScrollTo(op){ const ch = EB.charts.cFP, i = FPTOP.findIndex(o=>o.op===op); if (!ch || i < 0) return;
   const box = document.getElementById("fpScroll"), y = ch.scales.y.getPixelForValue(i);
   if (y < box.scrollTop + 30 || y > box.scrollTop + box.clientHeight - 30) box.scrollTop = Math.max(0, y - box.clientHeight / 2); }
-document.getElementById("fpQ").addEventListener("input", (e) => {
-  const q = e.target.value.trim().toLowerCase(); if (!q) { fpHover(null, "map"); return; }
-  const o = FPTOP.find(o => o.op.toLowerCase().includes(q)); if (!o) return;
-  fpScrollTo(o.op); fpHover(o.op, "map"); });
-document.getElementById("fpQ").addEventListener("keydown", (e) => { if (e.key === "Enter" && fpHot) { selDso(fpHot); e.target.value = ""; } });
+// operator search: suggestions from the current flex-pool list (logo, sites); picking one selects it
+EB.autocomplete(document.getElementById("fpQ"), (q) => {
+  const ql = q.toLowerCase();
+  return FPTOP.filter(o => o.op.toLowerCase().includes(ql))
+    .sort((a,b) => (a.op.toLowerCase().startsWith(ql)?0:1) - (b.op.toLowerCase().startsWith(ql)?0:1) || b.n - a.n).slice(0, 12)
+    .map(o => ({group:"Netzbetreiber im Flex-Pool", icon:EB.logo(o.op, 18), label:o.op, right:`${EB.n0(o.n)} Baust.${o.big ? " · " + o.big + " gross" : ""}`, value:o.op}));
+}, (it) => { if (st.d !== it.value) selDso(it.value); setTimeout(() => fpScrollTo(it.value), 50); });
 document.getElementById("fpScroll").addEventListener("scroll", () => { const t = document.getElementById("ctip"); if (t) t.style.opacity = 0; });
 const selDso = (d) => setDso(st.d===d ? "" : d);
 function drawFlex(){
