@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="data/validation.js?v=71f753ea"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
-<script src="assets/core.js?v=d878f596"></script>
+<script src="assets/core.js?v=e6cf8308"></script>
 </head>
 <body>
 <main class="wrap">
@@ -107,7 +107,12 @@ python3 scripts/02b_scrape_simap_new_lots.py    # Lose der neuen Plattform
 # ElCom: SPARQL data/raw/elcom/municipality_operator.rq an https://ld.admin.ch/query
 python3 scripts/03_prepare_gwr_gazetteer.py     # Gemeinden, PLZ, GWR-Auszug, Netzbetreiber
 python3 scripts/04_build_dataset.py             # notices / projects / firms (JSON + CSV) in data/processed/
-python3 scripts/05_export_web.py                # dashboard/data/*.js</pre>
+python3 scripts/05_export_web.py                # dashboard/data/*.js
+python3 scripts/06_basemap.py                   # Hintergrundkarte, Gemeindegeometrien
+python3 scripts/08_emblems_logos.py             # Wappen (Commons) und Logos der Netzbetreiber
+python3 scripts/09_link_gwr_simap.py            # GWR-Gebäude ↔ simap (Adresse, Parzelle, Strasse, Gebäudetyp)
+python3 scripts/10_competitions.py              # Ausschreibungen & Wettbewerbe
+python3 scripts/07_publish.py "Nachricht"       # GitHub Pages</pre>
     </div>
   </section>
 </main>
@@ -124,6 +129,7 @@ const SRC = [
   ["Strompreise und Netzbetreiber","ElCom","Netzbetreiber je Gemeinde, Tarife 2026 (C3, H4)","2026","LINDAS SPARQL","https://www.strompreis.elcom.admin.ch","data/raw/elcom/"],
   ["Wappen (Kantone, Gemeinden)","Wikidata / Wikimedia Commons","Wappen-Darstellungen als kleine Vorschaubilder (Commons-Thumbnails, nicht kopiert). Lizenz und Urheber je Datei im Tooltip des Wappens; amtliche Wappen dienen hier nur der Identifikation (Wappenschutzgesetz: keine Verwechslungs- oder Werbewirkung).","Abfrage 22.11.2026","Wikidata SPARQL (P771, P300 → P94), Commons API","https://commons.wikimedia.org/wiki/Category:Coats_of_arms_of_municipalities_of_Switzerland","data/raw/emblems/"],
   ["Logos der Netzbetreiber","Websites der Netzbetreiber (Adresse aus ElCom-Tarifdaten)","Website-Icons, einmalig beim Aufbau geladen und lokal abgelegt; Marken der jeweiligen Unternehmen, nur zur Identifikation. Für 267 von 553 Betreibern verfügbar.","22.11.2026","scripts/08_emblems_logos.py","https://www.strompreis.elcom.admin.ch","dashboard/data/logos/"],
+  ["Wettbewerbsplattform (Referenz)","espazium – Verlag der Fachzeitschriften TEC21, TRACÉS, archi","Vorbild für Aufbau und Kategorien der Seite «Ausschreibungen» (Wettbewerbsausschreibungen, Offerten, entschiedene Wettbewerbe, Karte; Filter Verfahren, Baukategorie, Aufgabe, Beschaffungsform, Kanton, Fachgebiet, Sprache). Inhalte von espazium werden nicht übernommen; die Einträge stammen aus simap, die Kategorien aus eigenen Regeln.","Stand 22.11.2026","Analyse der öffentlichen Seiten","https://competitions.espazium.ch/de","–"],
   ["Wohnbevölkerung","BFS STATPOP","Ständige Wohnbevölkerung je Gemeinde (Sortierung der Gemeindeliste im Flex-Pool)","2025","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/","data/raw/bfs/"],
   ["Bauausgaben","BFS Bau- und Wohnbaustatistik","Bauausgaben nach Kanton, Auftraggeber, Hoch-/Tiefbau, Neubau/Umbau","2014–2024","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/","data/raw/bfs/"],
   ["Wege zu Netto-Null für Baumaschinen","EBP 2025 (zitiert BAFU 2025)","464'067 t CO₂e Baumaschinen 2023; > 500 GWh/a Strombedarf 2050","2023/2050","Projektunterlage (nicht öffentlich verlinkt); Primärquelle BAFU","https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html","–"],

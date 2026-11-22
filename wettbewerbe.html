@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ausschreibungen · Baustellen-Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/style.css?v=38f283f4">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/comp.js?v=ef98040b"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/emblems.js?v=fbb6acc8"></script><script src="data/basemap.js?v=5110ee4a"></script>
+<script src="assets/core.js?v=e6cf8308"></script>
+<style>
+.ctabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.ctab{border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:8px 14px;font:inherit;font-weight:600;font-size:13px;color:var(--text-2);cursor:pointer}
+.ctab.on{background:var(--accent);border-color:var(--accent);color:#fff}.ctab .n{font-weight:500;opacity:.75;margin-left:6px}
+.clist{display:flex;flex-direction:column}
+.crow{display:grid;grid-template-columns:92px 1fr auto;gap:12px;padding:10px 6px;border-bottom:1px solid var(--grid);align-items:start;cursor:pointer;border-radius:8px}
+.crow:hover{background:var(--surface-2)}
+.c-date{font-size:12px;color:var(--text-2);font-variant-numeric:tabular-nums}.c-date b{display:block;font-size:13px;color:var(--text)}
+.c-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;color:var(--muted);margin-bottom:2px;align-items:center}
+.c-meta .form{font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;font-size:10.5px}
+.c-title{font-weight:600;font-size:13.5px;line-height:1.35}
+.c-auth{font-size:12px;color:var(--muted)}
+.c-win{font-size:12px;margin-top:4px;color:var(--text-2)}.c-win .rk{display:inline-block;min-width:18px;font-weight:700;color:var(--text)}
+.c-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:11.5px;white-space:nowrap}
+.tag{display:inline-block;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:600;color:var(--text-2)}
+.tag.sia{border-color:var(--accent);color:var(--accent)}
+.due{font-weight:600}.due.soon{color:var(--critical)}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead"><div><h1>Ausschreibungen und Wettbewerbe</h1>
+    <p>Offene Wettbewerbe und Studienaufträge, Planer-Offerten und Bauausschreibungen mit Eingabefrist, sowie entschiedene Wettbewerbe mit Rangierung – aufgebaut wie <a href="https://competitions.espazium.ch/de" target="_blank" rel="noopener">competitions.espazium.ch ↗</a>, Daten aus simap.ch. Datenstand <span id="asof"></span>.</p></div></div>
+  <div class="ctabs" id="tabs"></div>
+  <div class="filters" id="cf"></div>
+  <section class="grid g-kpi" id="kpis"></section>
+  <section class="card" style="margin-top:14px">
+    <div class="hd"><h2 id="listTitle">Liste</h2><span id="iC"></span><span class="hint" id="cnt"></span><span id="mbC" style="margin-left:8px"></span></div>
+    <div class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)" id="lay">
+      <div><div class="tscroll" style="max-height:640px;border:0"><div class="clist" id="list"></div></div></div>
+      <div><div id="cmap" class="map" style="height:420px"></div><div class="legend" id="cleg" style="margin-top:8px"></div>
+        <div class="chartbox" style="height:200px;margin-top:12px"><canvas id="cForm"></canvas></div></div>
+    </div>
+  </section>
+</main>
+<script>
+EB.shell("wettbewerbe.html"); EB.chartDefaults();
+document.getElementById("iC").outerHTML = EB.info("c_comp");
+if (innerWidth < 1000) document.getElementById("lay").style.gridTemplateColumns = "1fr";
+const C = window.COMP, R = C.rows;
+document.getElementById("asof").textContent = C.asof.split("-").reverse().join(".");
+const TABS = [["offen","Wettbewerbsausschreibungen"],["offerten","Offerten (Planer)"],["bau","Bauausschreibungen"],["entschieden","Entschiedene Wettbewerbe"]];
+const DIMS = [["form","Beschaffungsform"],["proc","Verfahren"],["bcat","Baukategorie"],["task","Art der Aufgabe"],["c","Kanton"],["fach","Fachgebiet"],["lang","Sprache"]];
+const st = Object.assign({ tab:"offen", sel:{}, q:"", y0:2016, y1:2026, sia:false }, EB.store.get("comp", {}));
+const save = () => EB.store.set("comp", st);
+const PL = {open:"offen",selective:"selektiv",invitation:"Einladung",direct:"freihändig"};
+const lab = (k,v) => k==="proc" ? (PL[v]||v||"–") : (v||"–");
+const daysTo = (d) => Math.round((new Date(d) - new Date(C.asof)) / 864e5);
+function pass(r, skip){
+  if (r.cat !== st.tab) return false;
+  if (st.tab === "entschieden") { const y = +r.d.slice(0,4); if (y < st.y0 || y > st.y1) return false; }
+  if (st.sia && !r.sia.length) return false;
+  if (st.q && !(r.t + " " + r.a + " " + r.m).toLowerCase().includes(st.q.toLowerCase())) return false;
+  for (const [k] of DIMS) if (k !== skip && st.sel[k] && st.sel[k].length && !st.sel[k].includes(r[k])) return false;
+  return true;
+}
+const map = EB.baseMap("cmap"); const PLY = EB.PointLayer(L);
+const layer = new PLY({tip:p=>`<b>${EB.esc(p.rec.t.slice(0,80))}</b><br>${EB.esc(p.rec.m||"")} ${p.rec.c} · ${p.rec.form}`, card:p=>card(p.rec)}); layer.addTo(map);
+const FCOL = {"Projektwettbewerb":"--s1","Projektstudie":"--s3","Gesamtleistungswettbewerb":"--s4","Gesamtleistungsstudie":"--s5","Ideenwettbewerb":"--s7","Ideenstudie":"--s7","Planerofferte":"--s1","Bauausschreibung":"--s1"};
+function card(r){
+  const win = r.w.length ? `<dl class="pc-kv"><dt>Rangierung</dt><dd>${r.w.slice(0,4).map((w,i)=>`${w[1]?w[1]+". ":""}${EB.ent("firm",w[0])}`).join("<br>")}</dd></dl>` : "";
+  return `<div class="pcard"><div class="pc-top"><span class="pc-status" style="--c:${EB.css(FCOL[r.form]||"--s1")}">${r.form}</span><span class="pc-id">${r.sia.map(s=>"SIA "+s).join(" · ")}</span></div>
+    <div class="pc-title">${EB.esc(r.t)}</div><div class="pc-sub">${EB.ent("auth", r.a)}</div>
+    <dl class="pc-kv">${r.m?`<dt>Ort</dt><dd>${EB.armMun(r.m,r.c,14)}${EB.esc(r.m)} ${r.c}</dd>`:""}<dt>Verfahren</dt><dd>${lab("proc",r.proc)}</dd>
+      <dt>Publiziert</dt><dd>${r.d}</dd>${r.dl?`<dt>Eingabefrist</dt><dd>${r.dl}</dd>`:""}<dt>Kategorie</dt><dd>${r.bcat} · ${r.task}</dd>${r.o?`<dt>Eingaben</dt><dd>${r.o}</dd>`:""}</dl>${win}
+    <div class="pc-btns"><a class="pbtn primary" href="${r.u}" target="_blank" rel="noopener">simap ↗</a>${EB.btn("Projektdetails", EB.lnk.proj(r.p), "internal")}${EB.btn("Zoomen","","zoom")}</div>
+    <div class="pc-src">Quelle: simap.ch · Struktur nach espazium competitions</div></div>`;
+}
+function chipsFor(k, F){
+  const cnt = {}; F.forEach(r => { const v = r[k] || ""; cnt[v] = (cnt[v]||0) + 1; });
+  const vals = Object.entries(cnt).filter(([v])=>v!=="").sort((a,b)=>b[1]-a[1]);
+  if (!vals.length) return "";
+  const sel = st.sel[k] || [];
+  return `<div class="fgroup"><span class="flabel">${DIMS.find(d=>d[0]===k)[1]}</span>${vals.slice(0, k==="c"?26:12).map(([v,n])=>`<button class="chip ${sel.includes(v)?"on":""}" data-k="${k}" data-v="${EB.esc(v)}">${k==="c"?EB.arm("c",v,12):""}${EB.esc(lab(k,v))} <span class="muted">${n}</span></button>`).join("")}</div>`;
+}
+function draw(){
+  save();
+  document.getElementById("tabs").innerHTML = TABS.map(([k,l])=>`<button class="ctab ${st.tab===k?"on":""}" data-t="${k}">${l}<span class="n">${EB.n0(R.filter(r=>r.cat===k).length)}</span></button>`).join("");
+  document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ st.tab=b.dataset.t; st.sel={}; draw(); });
+  const F = R.filter(r=>pass(r));
+  const yrs = st.tab==="entschieden" ? `<div class="fgroup years"><span class="flabel">Jahre</span>${EB.YEARS.map(y=>`<button class="chip ${y===st.y0||y===st.y1?"on":(y>st.y0&&y<st.y1?"inrange":"")}" data-y="${y}">${y}</button>`).join("")}</div>` : "";
+  document.getElementById("cf").innerHTML = yrs + DIMS.map(([k])=>chipsFor(k, R.filter(r=>pass(r,k)))).join("") +
+    `<div class="fgroup"><input type="search" id="cq" placeholder="Suche Titel, Vergabestelle, Ort…" value="${EB.esc(st.q)}"></div>
+     <label class="toggle"><input type="checkbox" id="csia" ${st.sia?"checked":""}>nur mit SIA 142/143/144</label><button class="chip" id="creset">Zurücksetzen</button>
+     <a class="chip" href="https://competitions.espazium.ch/de/wettbewerbe/${{offen:"offen",offerten:"offerten",bau:"offerten",entschieden:"entschieden"}[st.tab]}/" target="_blank" rel="noopener">auf espazium vergleichen ↗</a>`;
+  document.querySelectorAll("#cf [data-k]").forEach(b=>b.onclick=(e)=>{ const k=b.dataset.k, v=b.dataset.v, a=st.sel[k]=st.sel[k]||[]; const i=a.indexOf(v); if (e.shiftKey) { i>=0?a.splice(i,1):a.push(v); } else st.sel[k] = (i>=0&&a.length===1)?[]:[v]; draw(); });
+  document.querySelectorAll("#cf [data-y]").forEach(b=>b.onclick=(e)=>{ const y=+b.dataset.y; if (e.shiftKey) { if (y<st.y0) st.y0=y; else st.y1=y; } else if (st.y0===y&&st.y1===y) { st.y0=2016; st.y1=2026; } else st.y0=st.y1=y; draw(); });
+  let t; document.getElementById("cq").oninput=e=>{ clearTimeout(t); t=setTimeout(()=>{ st.q=e.target.value.trim(); draw(); document.getElementById("cq").focus(); },300); };
+  document.getElementById("csia").onchange=e=>{ st.sia=e.target.checked; draw(); };
+  document.getElementById("creset").onclick=()=>{ st.sel={}; st.q=""; st.sia=false; st.y0=2016; st.y1=2026; draw(); };
+  // KPIs
+  const isOpen = st.tab!=="entschieden";
+  const soon = F.filter(r=>r.dl && daysTo(r.dl)<=14).length;
+  const kp = (l,v,n)=>`<div class="card kpi"><div class="lab">${l}${EB.info("c_comp")}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`;
+  const byC = {}; F.forEach(r=>{ if(r.c) byC[r.c]=(byC[r.c]||0)+1; }); const topC = Object.entries(byC).sort((a,b)=>b[1]-a[1])[0];
+  const byB = {}; F.forEach(r=>{ byB[r.bcat]=(byB[r.bcat]||0)+1; }); const topB = Object.entries(byB).filter(x=>x[0]!=="Weitere").sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("kpis").innerHTML = kp(isOpen?"Offene Verfahren":"Entschiedene Verfahren", EB.n0(F.length), isOpen?"Eingabefrist ab "+C.asof.split("-").reverse().join("."):`${st.y0}–${st.y1}`) +
+    kp(isOpen?"Frist in ≤ 14 Tagen":"mit Rangierung", EB.n0(isOpen?soon:F.filter(r=>r.w.length).length), isOpen?"bald fällig":"Zuschlag / Rang publiziert") +
+    kp("SIA 142/143/144 genannt", EB.n0(F.filter(r=>r.sia.length).length), F.length?EB.n1(100*F.filter(r=>r.sia.length).length/F.length)+" %":"") +
+    kp("Offene Verfahren (Typ)", EB.n0(F.filter(r=>r.proc==="open").length), "übrige selektiv / Einladung / freihändig") +
+    kp("Häufigster Kanton", topC?EB.arm("c",topC[0],20)+topC[0]:"–", topC?topC[1]+" Verfahren":"") +
+    kp("Häufigste Baukategorie", topB?`<span style="font-size:16px">${topB[0]}</span>`:"–", topB?topB[1]+" Verfahren":"");
+  // list
+  const L2 = F.slice().sort((a,b)=> isOpen ? (a.dl||"").localeCompare(b.dl||"") : b.d.localeCompare(a.d)).slice(0, 400);
+  document.getElementById("listTitle").textContent = TABS.find(x=>x[0]===st.tab)[1];
+  document.getElementById("cnt").textContent = `${EB.n0(F.length)} Einträge${F.length>400?" · erste 400":""} · ${isOpen?"nach Eingabefrist":"neueste zuerst"}`;
+  document.getElementById("list").innerHTML = L2.map((r,i)=>{ const dd = r.dl ? daysTo(r.dl) : null;
+    return `<div class="crow" data-i="${i}"><div class="c-date">${isOpen?`Frist<b class="due ${dd<=14?"soon":""}">${r.dl.split("-").reverse().join(".")}</b>${dd} Tage`:`<b>${r.d.split("-").reverse().join(".")}</b>publiziert`}</div>
+      <div><div class="c-meta"><span class="form">${r.form}</span><span>${EB.arm("c",r.c,12)}${r.c||""}${r.m?" · "+EB.esc(r.m):""}</span><span>${lab("proc",r.proc)}</span><span>${r.bcat}</span><span>${r.task}</span></div>
+        <div class="c-title">${EB.esc(r.t)}</div><div class="c-auth">${EB.esc(r.a)}</div>
+        ${r.w.length&&!isOpen?`<div class="c-win">${r.w.slice(0,3).map((w,k)=>`<span class="rk">${w[1]||k+1}.</span> ${EB.esc(w[0])}`).join(" &nbsp; ")}</div>`:""}</div>
+      <div class="c-right">${r.sia.map(s=>`<span class="tag sia">SIA ${s}</span>`).join("")}${r.lang?`<span class="tag">${r.lang}</span>`:""}<a href="${r.u}" target="_blank" rel="noopener" onclick="event.stopPropagation()">simap ↗</a></div></div>`; }).join("") || `<div class="empty">Keine Einträge für diese Auswahl.</div>`;
+  document.querySelectorAll(".crow").forEach(el=>el.onclick=()=>{ const r=L2[+el.dataset.i]; if (r.lat && r.geo!=="authority") { map.setView([r.lat,r.lon],12); EB.showCard(map,[r.lat,r.lon],card(r)); } else EB.toast("Kein Ausführungsort verortet"); });
+  // map
+  const pts = F.filter(r=>r.lat&&r.geo!=="authority"&&r.geo!=="none").map(r=>({lat:r.lat,lon:r.lon,color:EB.css(FCOL[r.form]||"--s1"),r:isOpen&&r.dl&&daysTo(r.dl)<=14?5.5:4,rec:r}));
+  layer.setPoints(pts);
+  const forms = [...new Set(F.map(r=>r.form))];
+  document.getElementById("cleg").innerHTML = forms.map(f=>`<span><span class="swatch" style="background:${EB.css(FCOL[f]||"--s1")};border-radius:50%"></span>${f}</span>`).join("") + `<span class="muted">${EB.n0(pts.length)} verortet${isOpen?" · grösser = Frist ≤ 14 Tage":""}</span>`;
+  // chart: by year (decided) or by week of deadline (open)
+  if (isOpen) {
+    const wk = {}; F.forEach(r=>{ if(!r.dl) return; const w=Math.max(0,Math.floor(daysTo(r.dl)/7)); wk[w]=(wk[w]||0)+1; });
+    const n = Math.min(12, Math.max(...Object.keys(wk).map(Number), 0) + 1), labs = [...Array(n).keys()].map(i=>i===0?"diese Woche":`+${i} W.`);
+    EB.chart("cForm",{type:"bar",data:{labels:labs,datasets:[EB.bar({label:"Fristen",backgroundColor:EB.css("--s1"),data:labs.map((_,i)=>wk[i]||0)})]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} Eingabefristen`}}},scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false},ticks:{precision:0}}}}});
+  } else {
+    const fs = ["Projektwettbewerb","Projektstudie","Gesamtleistungswettbewerb","Gesamtleistungsstudie","Ideenwettbewerb"];
+    EB.chart("cForm",{type:"bar",data:{labels:EB.YEARS,datasets:fs.map(f=>EB.bar({label:f,backgroundColor:EB.css(FCOL[f]),data:EB.YEARS.map(y=>F.filter(r=>r.form===f&&+r.d.slice(0,4)===y).length)}))},
+      options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false},ticks:{precision:0}}},plugins:{legend:{position:"top",align:"start"}}}});
+  }
+}
+document.getElementById("mbC").outerHTML = EB.mapBtn("mbC");
+document.getElementById("mbC").onclick = () => { const F = R.filter(r=>pass(r)).slice(0,60); EB.listMap(TABS.find(x=>x[0]===st.tab)[1], F.map(r=>({lat:r.geo!=="authority"?r.lat:null, lon:r.lon, label:r.t, sub:`${r.form} · ${r.m||""} ${r.c}`, value:r.dl?("Frist "+r.dl.split("-").reverse().join(".")):r.d.slice(0,4), href:r.u, blank:true}))); };
+draw();
+</script>
+</body>
+</html>

@@ -28,7 +28,7 @@
   };
 
   /* ---------------- shell: top bar + footer + theme */
-  const PAGES = [["index.html", "Übersicht"], ["projects.html", "Projekte"], ["map.html", "Karte"], ["gwr.html", "GWR-Pipeline"], ["firms.html", "Firmen"], ["sources.html", "Quellen & Methoden"]];
+  const PAGES = [["index.html", "Übersicht"], ["projects.html", "Projekte"], ["map.html", "Karte"], ["gwr.html", "GWR-Pipeline"], ["wettbewerbe.html", "Ausschreibungen"], ["firms.html", "Firmen"], ["sources.html", "Quellen & Methoden"]];
   EB.shell = function (active) {
     // light is the default; a viewer's own choice (toggle) is remembered per browser
     document.documentElement.setAttribute("data-theme", EB.store.get("theme", "light"));
@@ -72,6 +72,7 @@
     ebp: ["EBP (2025) Wege zu Netto-Null für Baumaschinen in der Schweiz, S. 10 & 14 (Projektunterlage, nicht öffentlich verlinkt)", "https://www.ebp.ch"],
     bafuGhg: ["BAFU – Treibhausgasinventar der Schweiz (Quelle der 464 kt CO₂e Baumaschinen)", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html"],
     methods: ["Quellen & Methoden (dieses Dashboard)", "sources.html"],
+    espazium: ["espazium competitions – Wettbewerbsplattform (Referenz, nicht als Datenquelle übernommen)", "https://competitions.espazium.ch/de"],
     bfsPop: ["BFS STATPOP – ständige Wohnbevölkerung nach Gemeinde 2025 (px-x-0102010000_101)", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/"],
     bfsGeo: ["BFS GEOSTAT – generalisierte Gemeindegrenzen 2025 (Hintergrundkarte)", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html"],
     swisstopo: ["swisstopo – Landeskarte grau (Detail ab Zoom 12)", "https://www.swisstopo.admin.ch"],
@@ -95,6 +96,7 @@
     c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten. <b>simap-Verknüpfung</b> (Ring um den Punkt, Filter «simap»): <i>sicher</i> = gleiche Adresse (Strasse + Nr.) in Ausschreibung und GWR; <i>Parzelle</i> = Parzellen-Nr. bzw. EGRID aus der Ausschreibung in derselben Gemeinde (EGID kommt in simap-Texten nicht vor); <i>wahrscheinlich</i> = Strassenname im Titel/Ausführungsort, ohne Tief-/Leitungsbau; <i>möglich</i> = gleiche Gemeinde und passender öffentlicher Gebäudetyp (Schule, Spital, Sporthalle …), max. 2 Kandidaten. Nur «sicher» und «Parzelle» sind belastbar; die übrigen Stufen sind Hinweise zur Prüfung.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
     c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
     c_month: { t: "Publikationen pro Monat und Quelle", b: "Kontrolle auf Lücken und Brüche. Archiv: alle Publikationen inkl. Ausschreibungen. Neue Plattform: neueste Publikation je Projekt (plus Lose) – deshalb weniger Ausschreibungen nach 7/2024.", s: ["simapNew", "simapArch"] },
+    c_comp: { t: "Ausschreibungen und Wettbewerbe", b: "Aufbau nach dem Vorbild von competitions.espazium.ch (Wettbewerbsausschreibungen, Offerten, entschiedene Wettbewerbe, Karte), Daten ausschliesslich aus simap.ch und archiv.simap.ch. <b>Offen</b>: Eingabefrist ≥ Datenstand (22.11.2026). <b>Beschaffungsform</b> aus dem simap-Projekttyp (Projekt-/Ideen-/Gesamtleistungswettbewerb, Studienauftrag), im Archiv aus Titelstichworten. <b>SIA</b>: Nennung von SIA 142/143/144 im Publikationstext. <b>Art der Aufgabe</b> und <b>Baukategorie</b>: Stichworte DE/FR/IT im Titel (eigene Regeln, angelehnt an die espazium-Kategorien). <b>Rangierung</b>: Zuschlagsempfänger bzw. Rangliste der Wettbewerbspublikation. espazium kuratiert zusätzlich redaktionell (z. B. Begutachtung «Verfahren konform», Fachgebiet) – diese Angaben sind hier nicht enthalten; Links führen zu espazium als Referenz.", s: ["simapNew", "simapArch", "espazium", "methods"] },
     c_geo: { t: "Geokodierungs-Genauigkeit", b: "GWR-Adresse: Strasse+Nr. im Titel/Ort gefunden und im GWR-Eingangsregister gematcht. PLZ: Postleitzahl des Ausführungsorts. Gemeinde: Gemeinde-/Ortsname im Ort oder Titel. Vergabestelle: Rückfall auf Adresse der Vergabestelle (unsicher).", s: ["gwr", "methods"] },
   };
   EB.info = (id) => `<button class="info" data-info="${id}" aria-label="Info: ${EB.esc((EB.INFO[id] || {}).t || id)}">i</button>`;
@@ -793,6 +795,7 @@
     elcom: ["ElCom, Strompreise & Netzbetreiber", "https://www.strompreis.elcom.admin.ch", "Tarife 2026"],
     bfs: ["BFS, Bauausgaben", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/", "2024"],
     ebp: ["EBP (2025)", "https://www.ebp.ch", "2025"],
+    espazium: ["espazium competitions (Referenz)", "https://competitions.espazium.ch/de", "Struktur"],
     bfsPop: ["BFS STATPOP, Wohnbevölkerung", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/", "2025"],
     bfsGeo: ["BFS GEOSTAT, Gemeindegrenzen", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html", "2025"],
     swisstopo: ["swisstopo, Landeskarte", "https://www.swisstopo.admin.ch", "aktuell"],
@@ -801,7 +804,7 @@
   const KICKER = {
     c_year: "simap · Zuschläge", c_map: "simap · Standorte", c_canton: "simap · Kantone", c_size: "simap · Projektgrösse", c_proc: "simap · Vergabeverfahren",
     c_roles: "simap · Planer & Gewerke", c_util: "ElCom × simap · Netzbetreiber", c_firms: "simap · Firmen", k_value: "simap · Zuschläge",
-    k_emach: "simap · Ausschreibungstexte", k_projects: "simap · Projekte", c_gwr: "GWR · Gebäudestatus", c_flex: "GWR × ElCom · Flex-Pool",
+    k_emach: "simap · Ausschreibungstexte", k_projects: "simap · Projekte", c_comp: "simap · Ausschreibungen & Wettbewerbe", c_gwr: "GWR · Gebäudestatus", c_flex: "GWR × ElCom · Flex-Pool",
     c_val: "BFS × simap · Abdeckung", c_month: "simap · Datenqualität", c_geo: "Datenqualität · Geokodierung", k_co2: "Schätzung · CO₂", k_elec: "Schätzung · Strom",
   };
   const METHOD_ANCHOR = { c_year: "#break", c_month: "#break", c_proc: "#break", c_val: "#val", c_geo: "#quality", k_co2: "#methods", k_elec: "#methods" };
