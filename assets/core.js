@@ -90,7 +90,7 @@
     c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["simapNew", "simapArch", "methods"] },
     c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
     c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
-    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers (kein Netzgebiet-Polygon). Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo"] },
+    c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo"] },
     c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
     c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
     c_month: { t: "Publikationen pro Monat und Quelle", b: "Kontrolle auf Lücken und Brüche. Archiv: alle Publikationen inkl. Ausschreibungen. Neue Plattform: neueste Publikation je Projekt (plus Lose) – deshalb weniger Ausschreibungen nach 7/2024.", s: ["simapNew", "simapArch"] },
@@ -763,5 +763,36 @@
       hidden.has(k) ? hidden.delete(k) : hidden.add(k); onChange();
     }));
     const r = el.querySelector(".lg-reset"); if (r) r.onclick = () => { hidden.clear(); onChange(); };
+  };
+
+  /* grid-operator area: union of the municipalities the operator supplies (ElCom 2026) on BFS GEOSTAT 2025 boundaries.
+     Arcs used by exactly one of the operator's municipalities form the outer perimeter. */
+  EB.opArea = function (op) {
+    const T = window.MUNIGEO, M = window.MUN;
+    if (!T || !M || !op) return null;
+    if (!EB._arcs) {
+      const [sx, sy] = T.transform.scale, [tx, ty] = T.transform.translate;
+      EB._arcs = T.arcs.map((a) => { let x = 0, y = 0; return a.map(([dx, dy]) => { x += dx; y += dy; return [y * sy + ty, x * sx + tx]; }); });
+    }
+    const A = EB._arcs, cnt = new Map(), polys = [];
+    const bfs = Object.keys(M).filter((b) => (M[b][2] || "").split(" | ").includes(op));
+    let shared = 0, missing = 0;
+    bfs.forEach((b) => {
+      const rings = T.munis[b]; if (!rings) { missing++; return; }
+      if ((M[b][2] || "").includes(" | ")) shared++;
+      polys.push(...rings.map((r) => { const pts = []; r.forEach((i) => { const a = i >= 0 ? A[i] : A[~i].slice().reverse(); pts.push(...(pts.length ? a.slice(1) : a)); const k = i >= 0 ? i : ~i; cnt.set(k, (cnt.get(k) || 0) + 1); }); return pts; }));
+    });
+    const lines = [...cnt].filter(([, n]) => n === 1).map(([k]) => A[k]);
+    return { n: bfs.length, polys, lines, shared, missing };
+  };
+  EB.drawOpArea = function (map, group, op, o) {
+    group.clearLayers();
+    const a = EB.opArea(op); if (!a || !a.polys.length) return null;
+    if (!map.getPane("opArea")) { map.createPane("opArea"); map.getPane("opArea").style.zIndex = 390; }
+    const col = (o && o.color) || EB.css("--s2");
+    const rnd = L.svg({ pane: "opArea" });
+    L.polygon(a.polys, { pane: "opArea", renderer: rnd, stroke: false, fillColor: col, fillOpacity: (o && o.fill) || 0.13, interactive: false }).addTo(group);
+    L.polyline(a.lines, { pane: "opArea", renderer: rnd, color: col, weight: (o && o.weight) || 2.5, opacity: 0.95, lineJoin: "round", interactive: false }).addTo(group);
+    return a;
   };
 })();

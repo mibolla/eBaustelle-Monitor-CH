@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="assets/style.css?v=87743386">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script>
+<script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=a4505b0a"></script>
+<script src="assets/core.js?v=d420afd3"></script>
 </head>
 <body>
 <main class="wrap">
@@ -79,7 +79,7 @@ document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
 document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
 document.getElementById("fD").onchange=e=>{setDso(e.target.value.trim());};
 const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
-const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map);
+const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map); const mainArea = L.layerGroup().addTo(map);
 function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
@@ -125,10 +125,10 @@ function draw(){
 let TOP = [], FP = []; const HID_G = new Set();
 if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
-const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
+const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
 ["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
-let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null;
+let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
 function fpHover(op, from){
   if (op === fpHot) return;
@@ -143,6 +143,7 @@ function fpHover(op, from){
     ch.update("none");
   }
   const sel = st.d && FPM[st.d];
+  EB.drawOpArea(fpMap, fpArea, op || st.d || null);
   if (op && FPM[op]) {
     const [o1] = ORANGE();
     FPM[op].mk.setStyle({fillColor:o1, fillOpacity:0.85, color:EB.css("--surface"), weight:2.5}).bringToFront();
@@ -178,8 +179,13 @@ function drawFlex(){
     FPM[o.op] = {mk, style, o}; });
   const sel = st.d && acc[st.d];
   fpSites.setPoints(sel ? sel.sites.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa>=big?6:3.5,g})) : []);
-  if (sel) { fpMap.fitBounds(L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])).pad(0.1), {maxZoom:13}); FPM[st.d] && FPM[st.d].mk.bringToFront(); }
+  const area = EB.drawOpArea(fpMap, fpArea, st.d || null); FPAREA = area;
+  if (sel) { const b = area ? L.latLngBounds(area.lines.flat()) : L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])); fpMap.fitBounds(b.pad(0.08), {maxZoom:13}); FPM[st.d] && FPM[st.d].mk.bringToFront(); }
+  const ma = EB.drawOpArea(map, mainArea, st.d || null, {fill:0.08, weight:2});
+  if (ma && st.d) map.fitBounds(L.latLngBounds(ma.lines.flat()).pad(0.08), {maxZoom:13});
   document.getElementById("fpLeg").innerHTML = `<span><span class="swatch" style="background:${c2};border-radius:50%;opacity:.6"></span>Kreis = Schwerpunkt der Baustellen eines Netzbetreibers, Fläche ∝ Anzahl</span>`+
+    `<span><span class="swatch" style="background:transparent;border:2px solid ${ORANGE()[0]};border-radius:2px"></span>Netzgebiet</span>`+
+    (sel && FPAREA ? `<span class="muted">${FPAREA.n} Gemeinden${FPAREA.shared?`, davon ${FPAREA.shared} mit mehreren Netzbetreibern`:""}</span>` : "")+
     (sel ? `<span><span class="swatch" style="background:${ORANGE()[0]};border-radius:50%"></span>ausgewählt</span><span><span class="swatch" style="background:${gc[1]};border-radius:50%"></span>bewilligt</span><span><span class="swatch" style="background:${gc[2]};border-radius:50%"></span>im Bau</span><button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>` : "");
   const b = document.getElementById("fpClr"); if (b) b.onclick = () => { selDso(st.d);  };
 }
