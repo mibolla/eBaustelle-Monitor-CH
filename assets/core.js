@@ -323,7 +323,7 @@
     const hint = foot.filter((f) => /^Klick/.test(f)), facts = foot.filter((f) => !/^Klick/.test(f));
     const ttl = (t.title || []).filter(Boolean).map((x) => TIP_SHORT[x] || x).join(" ");
     el.innerHTML = `${ttl ? `<div class="ct-title">${EB.esc(ttl)}</div>` : ""}${rows}
-      ${facts.length ? `<div class="ct-facts">${facts.map(EB.esc).join("<br>")}</div>` : ""}${hint.length ? `<div class="ct-hint">${EB.esc(hint.join(" · "))}</div>` : ""}`;
+      ${facts.length ? `<div class="ct-facts">${facts.map(EB.esc).join("<br>")}</div>` : ""}${hint.length ? `<div class="ct-hint">${EB.esc(hint[0].split(" · ")[0])}</div>` : ""}`;
     const r = ctx.chart.canvas.getBoundingClientRect();
     const w = el.offsetWidth, h = el.offsetHeight;
     let x = r.left + t.caretX + 14, y = r.top + t.caretY - h / 2;
