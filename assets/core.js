@@ -344,14 +344,42 @@
   /* one map style for all pages: grey swisstopo base, zoom buttons, Swiss home button, metric scale, scroll-zoom */
   EB.CH_BOUNDS = [[45.82, 5.96], [47.81, 10.49]];
   EB.CH_ICON = `<svg viewBox="0 0 24 15.9" width="20" height="14" aria-hidden="true"><path d="M1.6 10.6L2.0 9.9L1.8 9.6L3.5 8.3L3.4 7.2L4.8 6.3L4.7 6.1L5.9 5.0L5.9 4.7L6.4 4.4L6.2 4.1L5.6 4.2L6.2 3.5L6.1 3.2L7.1 3.2L7.0 3.6L7.3 3.8L8.1 3.7L8.3 3.4L8.2 3.2L8.5 3.3L8.7 3.0L8.5 2.9L8.9 2.6L9.4 2.5L9.4 2.7L9.2 2.8L9.4 3.0L10.1 2.6L10.4 2.6L10.6 2.9L11.3 2.8L11.9 2.3L12.5 2.7L13.1 2.7L13.3 2.2L13.7 2.5L13.9 2.1L13.6 2.0L13.1 2.2L12.8 2.0L13.2 1.3L13.6 1.2L13.6 1.0L13.9 1.3L14.0 1.0L14.3 1.3L14.3 1.8L14.6 1.9L14.5 1.6L14.7 1.5L15.1 2.1L15.7 1.8L16.9 2.0L18.3 2.8L18.5 3.3L18.8 3.4L18.9 3.9L18.2 4.7L18.0 5.3L18.2 5.9L18.0 6.2L19.0 6.1L19.9 6.4L20.0 7.0L20.6 7.2L21.1 7.6L21.7 7.4L21.7 7.0L22.1 7.0L22.4 6.5L22.9 6.9L22.7 8.2L22.4 8.7L22.6 9.0L23.0 9.1L22.9 9.6L22.1 9.6L21.8 9.5L21.8 9.0L21.1 9.2L20.9 9.7L20.9 10.4L21.5 10.6L21.2 11.1L21.6 11.7L21.4 11.9L20.9 11.9L21.0 11.7L20.7 11.5L20.5 10.9L19.6 11.2L19.4 11.1L19.3 11.5L18.5 11.5L18.1 11.0L18.0 10.0L17.8 10.3L17.6 10.0L17.2 10.1L17.0 10.6L17.3 11.3L17.0 12.0L15.9 13.4L16.0 13.7L15.8 13.9L16.3 14.3L16.0 14.9L15.5 14.9L15.6 14.6L15.4 14.0L14.8 13.8L15.1 13.1L14.6 12.8L14.5 13.0L14.0 12.8L13.6 12.2L13.1 12.0L13.1 10.5L12.4 10.7L12.5 11.1L11.4 11.9L11.7 12.7L11.1 13.0L11.0 13.6L10.5 13.8L10.4 14.3L9.6 14.3L9.3 13.9L8.8 13.8L8.7 14.0L8.0 14.5L7.5 14.3L7.0 14.7L6.8 14.6L6.6 14.7L5.8 13.3L5.5 13.4L5.6 12.9L5.1 12.8L5.4 11.8L5.0 11.2L5.2 10.7L3.8 10.5L2.9 10.9L2.3 11.5L2.5 11.9L2.7 11.9L2.7 12.1L1.9 12.7L1.0 12.8L1.1 12.2L1.8 11.9L1.7 11.7L2.1 11.1Z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/></svg>`;
+  /* quiet vector background (BFS GEOSTAT boundaries): land, lakes, canton + municipality borders.
+     swisstopo grey tiles fade in only from zoom 12 for street-level orientation. */
+  EB.basemapStyle = () => ({
+    land: { stroke: false, fillColor: EB.css("--map-land"), fillOpacity: 1 },
+    lakes: { stroke: false, fillColor: EB.css("--map-water"), fillOpacity: 1 },
+    munis: { color: EB.css("--map-muni"), weight: 0.5, opacity: 1, fill: false },
+    cantons: { color: EB.css("--map-canton"), weight: 1, opacity: 1, fill: false },
+    outline: { color: EB.css("--map-canton"), weight: 1.2, opacity: 1, fill: false },
+  });
+  EB._basemaps = [];
+  document.addEventListener("eb-theme", () => EB._basemaps.forEach((f) => f()));
   EB.baseMap = function (id, opts) {
     opts = Object.assign({ preferCanvas: true, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, scrollWheelZoom: true, minZoom: 7, maxZoom: 19,
       maxBounds: [[44.9, 4.6], [48.7, 11.9]], maxBoundsViscosity: 0.8 }, opts || {});
     const map = L.map(id, opts);
     map.fitBounds(EB.CH_BOUNDS);
+    map.createPane("basemap"); map.getPane("basemap").style.zIndex = 150;
+    const rnd = L.canvas({ pane: "basemap", padding: 0.3 });
+    const B = window.BASEMAP;
+    if (B) {
+      const st = EB.basemapStyle();
+      const lyr = {
+        land: L.geoJSON(B.country, { pane: "basemap", renderer: rnd, style: st.land, interactive: false }),
+        munis: L.geoJSON(B.munis, { pane: "basemap", renderer: rnd, style: st.munis, interactive: false }),
+        cantons: L.geoJSON(B.cantons, { pane: "basemap", renderer: rnd, style: st.cantons, interactive: false }),
+        lakes: L.geoJSON(B.lakes, { pane: "basemap", renderer: rnd, style: st.lakes, interactive: false }),
+        outline: L.geoJSON(B.country, { pane: "basemap", renderer: rnd, style: st.outline, interactive: false }),
+      };
+      Object.values(lyr).forEach((l) => l.addTo(map));
+      EB._basemaps.push(() => { const s = EB.basemapStyle(); Object.entries(lyr).forEach(([k, l]) => l.setStyle(s[k])); });
+    }
     L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg", {
-      maxZoom: 19, maxNativeZoom: 18, attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>',
+      minZoom: 12, maxZoom: 19, maxNativeZoom: 18, opacity: 0.55, className: "eb-tiles",
+      attribution: '© <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>',
     }).addTo(map);
+    map.attributionControl.addAttribution('Grenzen: <a href="https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat.html" target="_blank" rel="noopener">BFS GEOSTAT</a>');
     const Home = L.Control.extend({
       options: { position: "topleft" },
       onAdd() {
@@ -368,7 +396,7 @@
     map.getContainer().classList.add("eb-map");
     return map;
   };
-  EB.gwrWms = () => L.tileLayer.wms("https://wms.geo.admin.ch/", { layers: "ch.bfs.gebaeude_wohnungs_register", format: "image/png", transparent: true, version: "1.3.0", minZoom: 13, attribution: "GWR © BFS" });
+  EB.gwrWms = () => L.tileLayer.wms("https://wms.geo.admin.ch/", { layers: "ch.bfs.gebaeude_wohnungs_register", format: "image/png", transparent: true, version: "1.3.0", minZoom: 15, opacity: 0.5, attribution: "GWR © BFS" });
 
   /* ---------------- detail shards (lazy, file:// friendly) */
   EB._shards = {}; EB._shardWait = {};

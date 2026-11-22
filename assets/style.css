@@ -166,8 +166,7 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 .map{height:440px}
 .maplegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-2);margin-top:8px}
 /* dark base map: same swisstopo tiles, rendered dark to match the theme */
-:root[data-theme="dark"] .eb-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.6)}
-:root[data-theme="dark"] .leaflet-container{background:#1e1e1c}
+:root[data-theme="dark"] .eb-map .eb-tiles{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.6)}
 /* map info card */
 .tt-hint{margin-top:4px;font-size:11px;color:var(--muted)}
 .eb-pop .leaflet-popup-content-wrapper{border-radius:12px;padding:0;box-shadow:0 10px 30px rgba(0,0,0,.18);border:1px solid var(--border)}
@@ -188,3 +187,8 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 .pbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff!important}
 .pbtn.primary:hover{filter:brightness(1.08);color:#fff!important}
 .pc-src{margin-top:7px;font-size:10.5px;color:var(--muted)}
+/* quiet background map */
+:root{--map-bg:#efefec;--map-land:#fbfbfa;--map-muni:#e6e5e0;--map-canton:#c4c3bc;--map-water:#dde6ee}
+:root[data-theme="dark"]{--map-bg:#151514;--map-land:#22232a;--map-muni:#2f313a;--map-canton:#4a4d58;--map-water:#1a2330}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--map-bg:#151514;--map-land:#22232a;--map-muni:#2f313a;--map-canton:#4a4d58;--map-water:#1a2330}}
+.eb-map.leaflet-container{background:var(--map-bg)}

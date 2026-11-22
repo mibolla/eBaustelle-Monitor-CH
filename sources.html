@@ -123,7 +123,8 @@ const SRC = [
   ["Strompreise und Netzbetreiber","ElCom","Netzbetreiber je Gemeinde, Tarife 2026 (C3, H4)","2026","LINDAS SPARQL","https://www.strompreis.elcom.admin.ch","data/raw/elcom/"],
   ["Bauausgaben","BFS Bau- und Wohnbaustatistik","Bauausgaben nach Kanton, Auftraggeber, Hoch-/Tiefbau, Neubau/Umbau","2014–2024","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/","data/raw/bfs/"],
   ["Wege zu Netto-Null für Baumaschinen","EBP 2025 (zitiert BAFU 2025)","464'067 t CO₂e Baumaschinen 2023; > 500 GWh/a Strombedarf 2050","2023/2050","Projektunterlage (nicht öffentlich verlinkt); Primärquelle BAFU","https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html","–"],
-  ["Hintergrundkarte","swisstopo","Landeskarte grau (WMTS)","aktuell","WMTS","https://www.geo.admin.ch","–"],
+  ["Hintergrundkarte (Grenzen)","BFS GEOSTAT (via swiss-maps 4.7.0, BSD-3-Clause)","Generalisierte Landes-, Kantons- und Gemeindegrenzen und Seen 2025 als ruhiger Vektor-Hintergrund","2025","TopoJSON → GeoJSON (scripts/06_basemap.py)","https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html","data/raw/boundaries/"],
+  ["Hintergrundkarte (Detail ab Zoom 12)","swisstopo","Landeskarte grau (WMTS), abgeschwächt","aktuell","WMTS","https://www.geo.admin.ch","–"],
   ["Zefix","EHRA","Handelsregister-Suche je Firma (nur Links)","aktuell","Web","https://www.zefix.ch","–"],
 ];
 document.getElementById("srcTbl").innerHTML = `<thead><tr><th>Quelle</th><th>Herausgeber</th><th>Inhalt</th><th>Zeitraum</th><th>Zugriff</th><th>Ablage</th></tr></thead><tbody>`+

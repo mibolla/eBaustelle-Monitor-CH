@@ -21,7 +21,7 @@ No server or database: the pages load pre-computed data files from `data/` (abou
 - ElCom electricity tariffs 2026 via LINDAS – grid operator per municipality
 - BFS construction expenditure (px-x-0904010000_202)
 - BAFU greenhouse gas inventory / EBP (2025) – CO₂ and electricity factors
-- Base map © swisstopo
+- Background map: generalised boundaries 2025, Bundesamt für Statistik (BFS), GEOSTAT – packaged by [swiss-maps](https://github.com/interactivethings/swiss-maps) (BSD-3-Clause, see `data/basemap-LICENSE.txt`); street detail from zoom 12 © swisstopo
 
 CO₂ and electricity values are top-down estimates (see `sources.html`). Award values are contract values as published, not final costs. Time series before and after July 2024 are not directly comparable (new simap platform and revised procurement law).
 
