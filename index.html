@@ -11,7 +11,7 @@
 <script src="data/projects.js?v=cfcf1cba"></script><script src="data/firms.js?v=419ba8d9"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script><script src="data/municipalities.js?v=7dfecca4"></script>
-<script src="assets/core.js?v=61fdc372"></script>
+<script src="assets/core.js?v=d878f596"></script>
 </head>
 <body>
 <main class="wrap">
@@ -206,9 +206,9 @@ function drawMap(F){
     map.on("moveend", ()=>{ if (document.getElementById("bboxF").checked) { bbox = map.getBounds(); draw(); } });
     document.getElementById("bboxF").onchange = (e)=>{ bbox = e.target.checked ? map.getBounds() : null; draw(); }; }
   const col = TCOL();
-  const pts = F.filter(p=>p.lat&&p.geo<=2&&!HID_T.has(p.type)).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:col[p.type],r:p.value?Math.max(2,Math.min(14,Math.sqrt(p.value/1e6)*1.6)):2,p}));
+  const pts = F.filter(p=>p.lat&&p.geo<=2&&!HID_T.has(p.type)).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:col[p.type],r:EB.valR(p.value),p}));
   layer.setPoints(pts);
-  EB.mapLegend(document.getElementById("mapLegend"), PR.types.map((t,k)=>({key:k,label:t,color:col[k]})), HID_T, ()=>drawMap(EB.filtered()), `Fläche ∝ Zuschlagssumme · ${EB.n0(pts.length)} verortete Projekte · Klick auf Legende = ein/aus`);
+  EB.mapLegend(document.getElementById("mapLegend"), PR.types.map((t,k)=>({key:k,label:t,color:col[k]})), HID_T, ()=>drawMap(EB.filtered()), `${EB.n0(pts.length)} verortete Projekte · Klick auf Legende = ein/aus`); document.getElementById("mapLegend").insertAdjacentHTML("beforeend", EB.valLegend());
 }
 if (innerWidth < 1000) document.getElementById("row1").style.gridTemplateColumns = "1fr";
 if (innerWidth < 1000) document.getElementById("lastRow").style.gridTemplateColumns = "1fr";

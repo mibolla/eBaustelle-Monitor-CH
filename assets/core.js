@@ -89,7 +89,7 @@
     c_proc: { t: "Vergabeart (Vertragsart)", b: "Verfahrensart gemäss Publikation: offen, selektiv, Einladung, freihändig (Direktvergabe). Bei Projekten mit mehreren Verfahren: häufigste Art.", s: ["simapNew", "simapArch"] },
     c_firms: { t: "Wichtigste Firmen", b: "Firmen mit der höchsten Zuschlagssumme in den gefilterten Projekten (Rolle aus BKP/CPV/Stichworten abgeleitet). Klick öffnet die Firmenseite.", s: ["simapNew", "simapArch", "methods"] },
     c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["simapNew", "simapArch", "methods"] },
-    c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Fläche ∝ Zuschlagssumme, Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
+    c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Kreisfläche ∝ Wurzel der Zuschlagssumme (CHF 1 Mio ≈ 3 px Radius, nicht linear, damit grosse Projekte die Karte nicht überdecken), Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
     c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
     c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo", "bfsPop"] },
     c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten. <b>simap-Verknüpfung</b> (Ring um den Punkt, Filter «simap»): <i>sicher</i> = gleiche Adresse (Strasse + Nr.) in Ausschreibung und GWR; <i>Parzelle</i> = Parzellen-Nr. bzw. EGRID aus der Ausschreibung in derselben Gemeinde (EGID kommt in simap-Texten nicht vor); <i>wahrscheinlich</i> = Strassenname im Titel/Ausführungsort, ohne Tief-/Leitungsbau; <i>möglich</i> = gleiche Gemeinde und passender öffentlicher Gebäudetyp (Schule, Spital, Sporthalle …), max. 2 Kandidaten. Nur «sicher» und «Parzelle» sind belastbar; die übrigen Stufen sind Hinweise zur Prüfung.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
@@ -967,16 +967,20 @@
   EB.FA_STEPS = [500, 2000, 10000, 40000];
   // circle AREA ∝ √(floor area)  ⇒  radius ∝ (floor area)^¼ ; 500 m² keeps r ≈ 3.3 px
   EB.faR = (fa) => (fa ? Math.max(1.6, Math.min(12, 3.32 * Math.pow(fa / 500, 0.25))) : 1.6);
-  EB.sizeLegend = function () {
-    const vals = EB.FA_STEPS, rMax = EB.faR(vals[vals.length - 1]), base = rMax * 2 + 2, colW = Math.max(46, rMax * 2 + 8);
-    const lab = (v) => (v >= 1000 ? EB.n0(v / 1000) + "k" : v) + " m²";
-    const body = vals.map((v, k) => { const r = EB.faR(v), cx = k * colW + colW / 2;
+  EB.sizeLegend = function (o) {
+    o = o || { steps: EB.FA_STEPS, r: EB.faR, lab: (v) => (v >= 1000 ? EB.n0(v / 1000) + "k" : v) + " m²", title: "Geschossfläche", tip: "Kreisfläche ∝ Wurzel der Geschossfläche (eine Skala für alle Bauphasen)" };
+    const vals = o.steps, rMax = o.r(vals[vals.length - 1]), base = rMax * 2 + 2, colW = Math.max(46, rMax * 2 + 8);
+    const body = vals.map((v, k) => { const r = o.r(v), cx = k * colW + colW / 2;
       return `<circle cx="${cx}" cy="${base - r}" r="${r}" fill="var(--text-2)" fill-opacity=".14" stroke="var(--text-2)" stroke-width="1"/>
-        <text x="${cx}" y="${base + 12}" font-size="10.5" text-anchor="middle" fill="var(--text-2)">${lab(v)}</text>`; }).join("");
+        <text x="${cx}" y="${base + 12}" font-size="10.5" text-anchor="middle" fill="var(--text-2)">${o.lab(v)}</text>`; }).join("");
     const W = colW * vals.length;
-    return `<span class="sizeleg" title="Kreisfläche ∝ Wurzel der Geschossfläche (eine Skala für alle Bauphasen)"><span class="muted">Geschossfläche</span>
-      <svg width="${W}" height="${base + 15}" viewBox="0 0 ${W} ${base + 15}" aria-label="Grössenlegende Geschossfläche">${body}</svg></span>`;
+    return `<span class="sizeleg" title="${o.tip}"><span class="muted">${o.title}</span>
+      <svg width="${W}" height="${base + 15}" viewBox="0 0 ${W} ${base + 15}" aria-label="Grössenlegende ${o.title}">${body}</svg></span>`;
   };
+  // simap projects: circle area ∝ √(award value), CHF 1 Mio = r 3.2 px; projects without value = small dot
+  EB.valR = (v) => (v ? Math.max(2, Math.min(13, 3.2 * Math.pow(v / 1e6, 0.25))) : 2);
+  EB.valLegend = () => EB.sizeLegend({ steps: [1e5, 1e6, 1e7, 1e8], r: EB.valR, lab: (v) => (v >= 1e6 ? EB.n0(v / 1e6) + " Mio" : EB.n1(v / 1e6) + " Mio"),
+    title: "Zuschlagssumme (CHF)", tip: "Kreisfläche ∝ Wurzel der Zuschlagssumme; ohne Wert = kleiner Punkt" });
 
   /* simap links of a GWR building (scripts/09_link_gwr_simap.py) */
   EB.LINK_LVL = { "sicher": ["gleiche Adresse", "var(--good)"], "Parzelle": ["gleiche Parzelle", "var(--good)"], "wahrscheinlich": ["Strasse im Titel", "var(--warning)"], "möglich": ["Gemeinde + Gebäudetyp", "var(--muted)"] };
