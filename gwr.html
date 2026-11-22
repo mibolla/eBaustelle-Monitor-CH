@@ -137,9 +137,13 @@ function fpHover(op, from){
   const ch = EB.charts.cFP;
   if (ch) {
     const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op, [o1,o2] = ORANGE();
-    ch.data.datasets[0].backgroundColor = FPTOP.map(o => o.op===op || st.d===o.op ? o1 : c2);
-    ch.data.datasets[1].backgroundColor = FPTOP.map(o => o.op===op || st.d===o.op ? o2 : c1);
+    const b0 = FPTOP.map(o => o.op===op || st.d===o.op ? o1 : c2), b1 = FPTOP.map(o => o.op===op || st.d===o.op ? o2 : c1);
+    ch.data.datasets[0].backgroundColor = ch.data.datasets[0].hoverBackgroundColor = b0;
+    ch.data.datasets[1].backgroundColor = ch.data.datasets[1].hoverBackgroundColor = b1;
+    // drop Chart.js' own hovered-bar state unless the mouse is on this very row of the chart
+    if (from !== "chart" || !op) ch.setActiveElements([]);
     if (from === "map") { const i = FPTOP.findIndex(o=>o.op===op); if (i>=0) { ch.tooltip.setActiveElements([{datasetIndex:0,index:i},{datasetIndex:1,index:i}], {x:0,y:0}); } else ch.tooltip.setActiveElements([], {x:0,y:0}); }
+    if (!op) ch.tooltip.setActiveElements([], {x:0,y:0});
     ch.update("none");
   }
   const sel = st.d && FPM[st.d];
@@ -163,8 +167,8 @@ function drawFlex(){
   const top = FP.slice(0,25); if (st.d && !top.find(o=>o.op===st.d) && acc[st.d]) top.push(acc[st.d]);
   const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op;
   EB.chart("cFP",{type:"bar",data:{labels:top.map(o=>o.op.length>40?o.op.slice(0,39)+"…":o.op),datasets:[
-      EB.bar({label:`gross (≥ ${EB.n0(big)} m²)`,data:top.map(o=>o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[0]:c2),borderColor:EB.css("--surface"),borderWidth:{right:2},borderRadius:0,borderSkipped:false}),
-      EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[1]:c1)})]},
+      EB.bar({label:`gross (≥ ${EB.n0(big)} m²)`,data:top.map(o=>o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[0]:c2),hoverBackgroundColor:top.map(o=>st.d===o.op?ORANGE()[0]:c2),borderColor:EB.css("--surface"),borderWidth:{right:2},borderRadius:0,borderSkipped:false}),
+      EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[1]:c1),hoverBackgroundColor:top.map(o=>st.d===o.op?ORANGE()[1]:c1)})]},
     options:{indexAxis:"y",scales:{x:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}},y:Object.assign({stacked:true,ticks:{autoSkip:false,font:{size:11}}},EB.axisPlain)},
       onClick:(e,els)=>{ if(els.length) selDso(top[els[0].index].op); },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; fpHover(els.length ? top[els[0].index].op : null, "chart"); },
