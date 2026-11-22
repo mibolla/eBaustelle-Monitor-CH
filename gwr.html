@@ -71,8 +71,10 @@ document.getElementById("fMx").onclick=()=>setMun("");
 function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemeinde-Filter ${st.m.split("|")[0]} entfernt – liegt nicht in ${c}`); st.m=""; document.getElementById("fMx").style.display="none"; const i=document.getElementById("fM"); i.style.display=""; i.value=""; }
   if (c && st.d && !anyPipe(c, st.d)) { EB.toast(`Versorger-Filter «${st.d}» entfernt – keine Baustellen dieses Netzbetreibers in ${c}`); st.d=""; document.getElementById("fD").value=""; }
   st.c=c; document.getElementById("fC").value=c; munOpts(); draw(); }
-function setDso(d){ if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
-  st.d=d; document.getElementById("fD").value=d; draw(); }
+function setDso(d){ const had = st.d; if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
+  st.d=d; document.getElementById("fD").value=d; draw();
+  // deselecting an operator returns both maps to the initial Switzerland view
+  if (had && !d) { FPFOCUS = null; fpMap.flyToBounds(EB.CH_BOUNDS, {duration:0.6}); map.flyToBounds(EB.CH_BOUNDS, {duration:0.6}); } }
 document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
 document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
 const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
