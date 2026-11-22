@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Projekte · Baustellen-Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/projects.js"></script><script src="data/firms.js"></script>
+<script src="assets/core.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead"><div><h1>Projekte</h1><p>Jedes Projekt bündelt die zugehörigen simap-Publikationen (Ausschreibungen, Zuschläge, Lose, Planer- und Wettbewerbsverfahren). Zeile anklicken für alle Angaben, Quellen und Verknüpfungen.</p></div></div>
+  <div class="filters" id="filters"></div>
+  <section class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start" id="lay">
+    <div class="card"><div class="hd"><h2>Projektliste</h2><span id="iL"></span><span class="sub" id="sortInfo"></span>
+      <span id="mbP" style="margin-left:8px"></span><button class="chip" id="csv" style="margin-left:6px">CSV (Auswahl)</button></div>
+      <div class="tscroll"><table class="tbl" id="tbl"></table></div>
+      <div class="pager" id="pager"></div></div>
+    <div class="card detail" id="detail"><div class="empty">Projekt in der Liste auswählen.</div></div>
+  </section>
+</main>
+<script>
+EB.shell("projects.html");
+const P = EB.projects(); EB.firms();
+document.getElementById("iL").outerHTML = EB.info("k_projects");
+if (innerWidth < 1000) document.getElementById("lay").style.gridTemplateColumns = "1fr";
+let sortKey = "value", sortDir = -1, page = 0, sel = location.hash.slice(1) || null, F = [];
+const PS = 50;
+const COLS = [["title","Projekt"],["munName","Ort"],["year","Jahr"],["value","Zuschläge"]];
+function refresh(){ F = EB.filtered(); EB.setCount(F.length, P.length); sortRows(); page = 0; if (sel) { const i = F.findIndex(p=>p.id===sel); if (i>=0) page = Math.floor(i/PS); } renderTable(); }
+function sortRows(){ F.sort((a,b)=>{ const x=a[sortKey], y=b[sortKey]; if (typeof x === "string") return sortDir*(x||"").localeCompare(y||""); return sortDir*((x||0)-(y||0)); }); }
+function renderTable(){
+  const rows = F.slice(page*PS, page*PS+PS);
+  document.getElementById("tbl").innerHTML = `<thead><tr>${COLS.map(([k,l])=>`<th data-k="${k}" class="${["year","value"].includes(k)?"num":""}">${l}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>`+
+    rows.map(p=>`<tr data-id="${p.id}" class="${p.id===sel?"sel":""}"><td><b>${EB.esc(p.title)}</b><div class="small muted">${EB.esc(p.authName)}</div><div><span class="badge t${p.type}">${p.typeName}</span>${p.emach?'<span class="badge">E-Maschinen</span>':""}${p.util?'<span class="badge">EVU-Bauherr</span>':""}<span class="small muted">${p.nn} Publ.</span></div></td>
+      <td class="small">${EB.esc(p.munName||"–")}<br><span class="muted">${p.canton||""}</span></td>
+      <td class="num">${p.year}</td><td class="num">${EB.chf(p.value)}</td></tr>`).join("")+"</tbody>";
+  document.querySelectorAll("#tbl th").forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if (sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=["title","munName","typeName"].includes(k)?1:-1; } sortRows(); renderTable(); });
+  document.querySelectorAll("#tbl tbody tr").forEach(tr=>tr.onclick=()=>select(tr.dataset.id));
+  const np = Math.max(1, Math.ceil(F.length/PS));
+  document.getElementById("pager").innerHTML = `<button class="chip" ${page<=0?"disabled":""} id="pv">‹</button> Seite ${page+1} / ${np} <button class="chip" ${page>=np-1?"disabled":""} id="nx">›</button>`;
+  document.getElementById("pv").onclick=()=>{ page=Math.max(0,page-1); renderTable(); };
+  document.getElementById("nx").onclick=()=>{ page=Math.min(np-1,page+1); renderTable(); };
+}
+const NT = { tender:"Ausschreibung", award:"Zuschlag", contest_result:"Wettbewerbsresultat", advance_notice:"Vorankündigung", abandonment:"Abbruch" };
+const CT = { construction:"Bauauftrag", service:"Planung/DL", competition:"Wettbewerb/Studie" };
+let dmap;
+async function select(id){
+  sel = id; history.replaceState(null,"","#"+id);
+  document.querySelectorAll("#tbl tbody tr").forEach(tr=>tr.classList.toggle("sel", tr.dataset.id===id));
+  const p = EB._PI[id]; if (!p) return;
+  const el = document.getElementById("detail"); el.innerHTML = `<div class="empty">lädt…</div>`;
+  const d = await EB.detail(p); if (sel!==id) return;
+  const RL = window.PROJ.role_label;
+  const geoLab = {"address (GWR)":"GWR-Adresse","postcode":"Postleitzahl","municipality":"Gemeinde","authority":"Sitz Vergabestelle (unsicher)","none":"nicht verortet"}[window.PROJ.geos[p.geo]];
+  const firmsTbl = (d.firms||[]).map(f=>`<tr><td><a href="${EB.lnk.firm(f.name)}">${EB.esc(f.name)}</a><div class="small muted">${f.roles.map(r=>RL[r]||({contractor:"Bauunternehmen",planner:"Planer"})[r]||r).join(", ")}</div></td>
+      <td class="num">${EB.chf(f.value)}</td><td class="num">${f.n}</td><td class="small"><a href="${EB.lnk.zefix(f.name)}" target="_blank" rel="noopener">Zefix ↗</a><br><a href="${EB.lnk.web(f.name)}" target="_blank" rel="noopener">Referenzen ↗</a></td></tr>`).join("");
+  const gwr = (d.gwr||[]).map(g=>`<tr><td><a href="${EB.lnk.gwrRec(g.egid)}" target="_blank" rel="noopener">EGID ${g.egid}</a>${g.name?`<div class="small muted">${EB.esc(g.name)}</div>`:""}</td><td>${EB.esc(g.status||"–")}</td><td class="small">${EB.esc(g.klass||"–")}</td>
+      <td class="num">${g.year||"–"}</td><td class="num">${g.area?EB.n0(g.area)+" m²":"–"}${g.floors?` × ${g.floors} G.`:""}</td><td class="small">${EB.esc(g.heating||"–")}</td><td class="small"><a href="${EB.lnk.gwrMap(g.lat,g.lon)}" target="_blank" rel="noopener">Karte ↗</a></td></tr>`).join("");
+  const nts = (d.notices||[]).map(n=>`<div class="it ${n.t==="award"||n.t==="contest_result"?"award":""}">
+      <div class="small muted">${n.d} · ${NT[n.t]||n.t} · ${CT[n.c]||n.c} · ${EB.PROC_LABEL[n.p]||n.p||"–"}${n.fw?" · Rahmenvertrag":""}</div>
+      <div><b>${EB.esc(n.ti)}</b> <a href="${n.u}" target="_blank" rel="noopener" class="small">simap ↗</a></div>
+      ${n.de?`<div class="small muted">${EB.esc(n.de.slice(0,260))}${n.de.length>260?"…":""}</div>`:""}
+      <div class="small">${n.cpv.length?"CPV "+n.cpv.join(", "):""}${n.bkp.length?" · BKP "+n.bkp.join(", "):""}${n.npk.length?" · NPK "+n.npk.slice(0,6).join(", "):""}${n.lt?" · Ort: "+EB.esc(n.lt):""}</div>
+      ${n.v.length?`<div class="small" style="margin-top:3px">${n.v.map(v=>`→ <a href="${EB.lnk.firm(v.n)}">${EB.esc(v.n)}</a>${v.c?` (${EB.esc(v.pl)} ${EB.esc(v.c)})`:""}${v.pr?" · <b>"+EB.chf(v.pr)+"</b>":""}${v.dup?' <span class="badge" title="identische Firma+Preis bereits in '+v.dup+' – nicht doppelt gezählt">Duplikat</span>':""}${v.rk?" · Rang "+v.rk:""}`).join("<br>")}${n.o?`<br><span class="muted">${n.o} Angebote</span>`:""}</div>`:""}
+      ${n.em?'<span class="badge">E-Baumaschinen erwähnt</span>':""}${n.co?'<span class="badge">CO₂/Nachhaltigkeit erwähnt</span>':""}
+    </div>`).join("");
+  el.innerHTML = `
+    <div class="hd" style="align-items:flex-start"><div><span class="badge t${p.type}">${p.typeName}</span> <span class="badge">${p.sizeName}</span> <span class="small muted">${p.id}</span><h2 style="font-size:18px;margin-top:6px">${EB.esc(p.title)}</h2>
+      <div class="small muted">${EB.esc(d.auth)}${d.auth_type?" · "+d.auth_type:""}</div></div></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px">
+      <div class="kpi"><div class="lab">Bauleistungen${EB.info("k_value")}</div><div class="val" style="font-size:18px">${EB.chf(p.vw)}</div></div>
+      <div class="kpi"><div class="lab">Planung/Wettb.</div><div class="val" style="font-size:18px">${EB.chf(p.vp)}</div></div>
+      <div class="kpi"><div class="lab">CO₂ Maschinen${EB.info("k_co2")}</div><div class="val" style="font-size:18px">${p.co2?EB.n0(p.co2)+" t":"–"}</div></div>
+      <div class="kpi"><div class="lab">Strom elektr.${EB.info("k_elec")}</div><div class="val" style="font-size:18px">${p.elec?EB.n0(p.elec)+" MWh":"–"}</div></div>
+    </div>
+    <dl class="kv">
+      <dt>Ort</dt><dd>${EB.esc(p.munName||"–")} ${p.canton||""} <span class="muted small">(Genauigkeit: ${geoLab})</span></dd>
+      <dt>Zeitraum</dt><dd>${p.y0===p.y1?p.y0:p.y0+"–"+p.y1} · ${p.nn} Publikationen, ${p.na} Zuschläge</dd>
+      <dt>Vergabeart</dt><dd>${Object.entries(d.procs||{}).map(([k,v])=>`${EB.PROC_LABEL[k]||k} (${v})`).join(", ")||"–"}${EB.info("c_proc")}</dd>
+      <dt>Gewerke / Rollen</dt><dd>${p.roles.map(i=>`<span class="badge">${RL[window.PROJ.roles[i]]}</span>`).join("")||"–"}</dd>
+      <dt>Netzbetreiber${EB.info("c_util")}</dt><dd>${EB.esc(d.dso||"–")}${d.tariff?` · Tarif C3 2026: ${d.tariff} Rp./kWh`:""}${d.bfs?` · <a href="${EB.lnk.elcom(d.bfs)}" target="_blank" rel="noopener">ElCom ↗</a>`:""}${p.util?'<br><span class="badge">Versorger ist Bauherr</span>':""}${p.grid?'<span class="badge">Netz-/Ladeinfrastruktur-Arbeiten</span>':""}</dd>
+      <dt>GWR-Gebäudefläche</dt><dd>${d.gfa?EB.n0(d.gfa)+" m² (Grundfläche × Geschosse)":"–"}</dd>
+      <dt>Hinweise</dt><dd>${p.emach?'<span class="badge">E-Baumaschinen erwähnt</span>':""}${p.co2m?'<span class="badge">CO₂/Nachhaltigkeit erwähnt</span>':""}${p.fw?'<span class="badge">Rahmenvertrag</span>':""}${!p.emach&&!p.co2m&&!p.fw?"–":""}</dd>
+    </dl>
+    ${p.lat?`<div id="dmap" class="map" style="height:220px;margin-top:12px"></div>`:""}
+    <h3 style="margin-top:16px">Firmen (Zuschlagsempfänger)${EB.info("c_firms")}</h3>
+    ${firmsTbl?`<div class="tscroll" style="max-height:260px"><table class="tbl"><thead><tr><th>Firma / Rolle</th><th class="num">Wert</th><th class="num">Zuschl.</th><th>Quellen</th></tr></thead><tbody>${firmsTbl}</tbody></table></div>`:`<div class="muted small">Keine Zuschläge publiziert.</div>`}
+    <h3 style="margin-top:16px">GWR-Gebäude${EB.info("c_gwr")}</h3>
+    ${gwr?`<div class="small muted" style="margin-bottom:4px">Über Adresse im Titel/Ausführungsort mit dem GWR-Eingangsregister verknüpft${p.type===1?" (bei Tiefbau: Gebäude an der referenzierten Adresse, nur Lagebezug)":""}.</div><div class="tscroll" style="max-height:220px"><table class="tbl"><thead><tr><th>EGID</th><th>Status</th><th>Kategorie</th><th class="num">Baujahr</th><th class="num">Fläche</th><th>Heizung</th><th></th></tr></thead><tbody>${gwr}</tbody></table></div>`
+      :`<div class="muted small">Keine Adresse für einen GWR-Abgleich gefunden. ${p.lat?`<a href="${EB.lnk.gwrMap(p.lat,p.lon)}" target="_blank" rel="noopener">GWR-Karte am Standort ↗</a>`:""}</div>`}
+    <h3 style="margin-top:16px">Publikationen auf simap (${(d.notices||[]).length})</h3>
+    <div class="tl">${nts}</div>`;
+  if (p.lat) {
+    dmap && dmap.remove(); dmap = EB.baseMap("dmap"); dmap.setView([p.lat,p.lon], p.geo===0?16:12);
+    L.circleMarker([p.lat,p.lon],{radius:8,color:EB.css("--surface"),weight:2,fillColor:EB.css(EB.TYPE_COLOR[p.type]),fillOpacity:.9}).addTo(dmap);
+    (d.gwr||[]).forEach(g=>L.circleMarker([g.lat,g.lon],{radius:5,color:EB.css("--surface"),weight:1,fillColor:EB.css("--gwr-done"),fillOpacity:.9}).bindTooltip("EGID "+g.egid).addTo(dmap));
+    if (p.geo===0) EB.gwrWms().addTo(dmap);
+  }
+}
+document.getElementById("mbP").outerHTML = EB.mapBtn("mbP");
+document.getElementById("mbP").onclick = () => { const rows = F.slice(page*PS, page*PS+PS);
+  EB.listMap(`Projektliste, Seite ${page+1}`, rows.map(p=>({lat:p.geo<=2?p.lat:null, lon:p.lon, label:p.title, sub:`${p.munName||"–"} ${p.canton} · ${p.typeName} · ${p.year}`, value:EB.chf(p.value), href:"#"+p.id, color:EB.css(EB.TYPE_COLOR[p.type])})), {note:"Doppelklick in der Liste: Details"});
+  document.querySelectorAll(".lm-list li").forEach((li,i)=>li.ondblclick=()=>{ select(rows[i].id); }); };
+document.getElementById("csv").onclick = () => {
+  const cols = ["id","title","authName","canton","munName","year","typeName","sizeName","procName","value","vw","vp","co2","elec","dsoName","lat","lon"];
+  const q = (v)=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
+  const txt = [cols.join(";")].concat(F.map(p=>cols.map(c=>q(p[c])).join(";"))).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"})); a.download = "baustellen_auswahl.csv"; a.click();
+};
+EB.filterBar(document.getElementById("filters"), refresh, {search:true});
+refresh();
+window.addEventListener("hashchange", ()=>{ const h=location.hash.slice(1); if (h && h!==sel && EB._PI[h]) select(h); });
+if (sel && EB._PI[sel]) { if (!F.find(p=>p.id===sel)) { F.unshift(EB._PI[sel]); renderTable(); } select(sel); }
+</script>
+</body>
+</html>

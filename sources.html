@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quellen & Methoden · Baustellen-Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data/validation.js"></script>
+<script src="assets/core.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead"><div><h1>Datenquellen, Methoden und Plausibilisierung</h1>
+    <p>Wie die Daten erhoben, bereinigt, verknüpft und geprüft wurden – mit Links zu allen Quellen. Alle Rohdaten, Zwischenstände und Skripte liegen im Projektordner <code>simap_scraping/</code>.</p></div></div>
+
+  <section class="grid g-kpi" id="kpis"></section>
+
+  <section class="grid" style="grid-template-columns:220px minmax(0,1fr);margin-top:18px;align-items:start" id="lay">
+    <nav class="card toc" style="position:sticky;top:80px"><h3>Inhalt</h3>
+      <a href="#src">1 Datenquellen</a><a href="#pipe">2 Verarbeitung</a><a href="#methods">3 Methoden</a><a href="#break">4 Strukturbruch 2024</a>
+      <a href="#val">5 Abgleich BFS</a><a href="#quality">6 Datenqualität</a><a href="#spot">7 Stichprobe</a><a href="#limits">8 Grenzen</a><a href="#repro">9 Reproduzieren</a></nav>
+    <div class="prose" style="max-width:none">
+
+<h2 id="src">1 Datenquellen</h2>
+<div class="tscroll" style="max-height:none"><table class="tbl" id="srcTbl"></table></div>
+
+<h2 id="pipe">2 Verarbeitungskette</h2>
+<div class="card" style="padding:12px"><svg viewBox="0 0 980 150" width="100%" role="img" aria-label="Verarbeitungskette">
+  <style>.bx{fill:var(--surface-2);stroke:var(--border)}.tx{fill:var(--text);font:600 12px Inter,sans-serif}.ts{fill:var(--text-2);font:11px Inter,sans-serif}.ar{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+  <g><rect class="bx" x="5" y="10" width="170" height="56" rx="8"/><text class="tx" x="15" y="32">archiv.simap.ch</text><text class="ts" x="15" y="50">2016 – 6/2024, alle Publ.</text></g>
+  <g><rect class="bx" x="5" y="84" width="170" height="56" rx="8"/><text class="tx" x="15" y="106">simap.ch API</text><text class="ts" x="15" y="124">7/2024 – heute</text></g>
+  <path class="ar" d="M175,38 L222,70"/><path class="ar" d="M175,112 L222,82"/>
+  <g><rect class="bx" x="225" y="47" width="160" height="56" rx="8"/><text class="tx" x="235" y="69">01–02 Scraping</text><text class="ts" x="235" y="87">Listen + Detail-JSON</text></g>
+  <path class="ar" d="M385,75 L420,75"/>
+  <g><rect class="bx" x="423" y="47" width="170" height="56" rx="8"/><text class="tx" x="433" y="69">04 Vereinheitlichen</text><text class="ts" x="433" y="87">Dedup · Klassieren · Geokodieren</text></g>
+  <path class="ar" d="M593,75 L628,75"/>
+  <g><rect class="bx" x="631" y="47" width="150" height="56" rx="8"/><text class="tx" x="641" y="69">Projekt-Cluster</text><text class="ts" x="641" y="87">Lose/Gewerke → Baustelle</text></g>
+  <g><rect class="bx" x="631" y="112" width="150" height="34" rx="8"/><text class="ts" x="641" y="133">03 GWR · ElCom · PLZ</text></g>
+  <path class="ar" d="M706,112 L706,105"/>
+  <path class="ar" d="M781,75 L816,75"/>
+  <g><rect class="bx" x="819" y="47" width="155" height="56" rx="8"/><text class="tx" x="829" y="69">05 Export</text><text class="ts" x="829" y="87">Dashboards + CSV/JSON</text></g>
+</svg></div>
+
+<h2 id="methods">3 Methoden</h2>
+<h3>Scraping</h3>
+<p><b>Archiv (vor 1.7.2024):</b> <code>POST https://archiv.simap.ch/api/search</code> monatsweise je Auftragsart (WORKS, SERVICES, CONTEST), 1000 Treffer/Seite; danach <code>GET /api/detail?meldungsnummer=…</code> für alle Zuschläge (OB02, OB08) von Bauaufträgen, Wettbewerben und Planungsleistungen (CPV 71*). 40'682 Detail-Datensätze, 0 Fehler.
+<b>Neue Plattform:</b> <code>GET https://www.simap.ch/api/publications/v2/project/project-search</code> wochenweise für <i>construction</i>, Wettbewerbe/Studienaufträge und <i>service</i> mit CPV 71000000 (rollierende Paginierung), dann <code>publication-details</code> der jeweils neuesten Publikation je Projekt und je Los. Max. 6 parallele Anfragen, Wiederholungen mit Backoff.</p>
+<h3>Bereinigung und De-Duplizierung</h3>
+<p>(a) Das Archiv publiziert jede Meldung je Sprache (DE/FR/IT) separat unter derselben Projekt-ID: es wird je Projekt-ID, Meldungstyp und Datum eine Version behalten (DE vor FR vor IT). (b) Identische Firma + identischer Preis (auf den Rappen) bei derselben Projekt-ID oder Vergabestelle bzw. nicht-runde Beträge: als Wiederholung gewertet und nicht doppelt summiert. (c) Planungsleistungen nur mit bau-relevanten CPV (712*, 7131*–7134*, 714*, 7152*, 7154*), ohne IT/Beratungs-Pools. (d) Preise > CHF 2 Mrd und Nicht-CHF-Preise ausgeschlossen. Rahmenverträge (Stichworte Rahmenvertrag, contrat-cadre, accordo quadro, Pool) werden markiert und sind standardmässig ausgeblendet.</p>
+<h3>Klassierung</h3>
+<p><b>Bauart:</b> Hochbau/Tiefbau aus CPV (4521*, 453*, 454* → Hochbau; 451*, 4522*–4525* → Tiefbau), BKP (→ Hochbau), NPK 1xx–2xx (→ Tiefbau), Konstruktionskategorie der neuen Plattform, Stichworte als Rückfall. Projekte mit Hoch- und Tiefbau-Anteilen > ⅓: «Gemischt». <b>Rollen:</b> Architektur (CPV 712*, BKP 291, Wettbewerbe), Elektroplanung (BKP 293, CPV 71323*/71314*, Stichworte DE/FR/IT), HLKSE-Planung (CPV 71321*), Bauingenieur (CPV 7131*/7132*), Elektroinstallation (BKP 23*, CPV 4531*), Netz/Ladeinfrastruktur (Trafostation, Kabelanlage, Unterwerk, Ladestation …). <b>Versorger als Bauherr:</b> Name der Vergabestelle enthält EW/Energie/Services industriels/AEW/EKZ/IWB usw.</p>
+<h3>Geokodierung</h3>
+<p>Reihenfolge: (1) Strasse + Hausnummer im Ausführungsort/Titel/Beschreibung, exakt abgeglichen mit dem GWR-Eingangsregister (Gemeinde muss passen oder die Adresse ist schweizweit eindeutig) → Koordinate des Gebäudes und EGID; (2) PLZ des Ausführungsorts → Median der Eingänge dieser PLZ; (3) Gemeinde- oder Ortsname in Ort/Titel (n-Gramm-Abgleich mit GWR-Gemeinden und PLZ-Orten, Kanton der Vergabestelle bevorzugt, Stoppliste für Allerweltswörter); (4) Rückfall Sitz der Vergabestelle (nicht auf Karten gezeigt). Koordinaten LV95 → WGS84 mit swisstopo-Näherungsformel (± 1 m).</p>
+<h3>Gruppierung zu Projekten (Baustellen)</h3>
+<p>Union-Find über: gleiche simap-Projekt-ID; gleiche Vergabestelle + gleicher Basistitel (Titel ohne BKP/NPK/CFC/Los-/Submissionspaket-Angaben und ohne Gewerkebezeichnung am Ende, ≥ 12 Zeichen, ≥ 2 nicht-generische Wörter); gemeinsame Programmnummer (ASTRA MP-xxxxxx bzw. 6-stellige Projektnummer + N-Strasse, BBL b-Nummer, Stadt Zürich BAV-Nummer); unscharfer Abgleich innerhalb derselben Vergabestelle (Jaccard der Kennwörter ≥ 0.6, mind. 2 gemeinsame). Die Gruppierung ist bewusst konservativ: Grossprojekte können auf mehrere Cluster verteilt bleiben (z. B. 2. Gotthardröhre: Hauptlose CHF 1.53 Mrd in einem Cluster, Planer- und BSA-Lose in weiteren).</p>
+<h3>Energieversorger</h3>
+<p>Netzbetreiber je Gemeinde aus den ElCom-Tarifdaten 2026 (LINDAS SPARQL, Produkt «standard»), Tarif Kategorie C3 (150 MWh/a, 50 kW) als Referenz für einen Baustellenanschluss. 2'106 von 2'110 Gemeinden zugeordnet.</p>
+<h3>CO₂- und Stromschätzung</h3>
+<div class="card" style="padding:12px" id="factorBox"></div>
+<h3>Grössenklassen</h3><p>Nach Zuschlagssumme je Projekt (Bau + Planung): S < 1 Mio, M 1–5 Mio, L 5–20 Mio, XL 20–100 Mio, XXL ≥ 100 Mio CHF.</p>
+
+<h2 id="break">4 Strukturbruch Juli 2024</h2>
+<div class="warnbox">Ab 1.7.2024 neue simap-Plattform; gleichzeitig wirkt das revidierte Beschaffungsrecht (BöB/IVöB 2019) in allen Kantonen. Zahl und Summe publizierter Zuschläge steigen sprunghaft (v. a. offene Verfahren und publizierte freihändige Vergaben). Zudem liefert die neue API pro Projekt nur die jeweils neueste Publikation, daher erscheinen nach 7/2024 weniger Ausschreibungen. Zeitreihen über 2024 hinweg sind deshalb als Niveau-Bruch zu lesen, nicht als Marktwachstum.</div>
+<div class="grid g2" style="margin-top:12px">
+  <div class="card"><div class="hd"><h2>Publikationen pro Monat</h2><span id="iM"></span></div><div class="chartbox"><canvas id="cMonth"></canvas></div></div>
+  <div class="card"><div class="hd"><h2>Zuschläge pro Jahr nach Vergabeart</h2><span id="iP"></span><span class="sub">Anzahl</span></div><div class="chartbox"><canvas id="cProc"></canvas></div></div>
+</div>
+
+<h2 id="val">5 Abgleich mit der BFS-Baustatistik</h2>
+<p>Unabhängige Referenz: BFS-Bauausgaben (Tabelle px-x-0904010000_202, CHF, jährliche Ausgaben). Die simap-Zuschlagssumme für Bauleistungen wird mit den Bauausgaben <b>öffentlicher Auftraggeber</b> verglichen. Erwartung: deutlich unter 100 %, weil nur Aufträge über den Schwellenwerten publiziert werden, Unterhalt oft unterschwellig vergeben wird und SBB/Post/Swissgrid teils als private Auftraggeber gezählt werden.</p>
+<div class="grid g2">
+  <div class="card"><div class="hd"><h2>simap-Zuschläge (Bau) in % der öffentlichen Bauausgaben</h2><span id="iV1"></span><span class="sub">Schweiz</span></div><div class="chartbox"><canvas id="cCov"></canvas></div></div>
+  <div class="card"><div class="hd"><h2>Abdeckung nach Kanton, Mittel 2016–2023</h2><span id="iV2"></span><span class="sub">Ausführungsort</span></div><div class="chartbox"><canvas id="cCovC"></canvas></div></div>
+</div>
+<div class="tscroll" style="margin-top:10px;max-height:none"><table class="tbl" id="valTbl"></table></div>
+
+<h2 id="quality">6 Datenqualität</h2>
+<div class="grid g2">
+  <div class="card"><div class="hd"><h2>Lagegenauigkeit der Projekte</h2><span id="iG"></span></div><div class="chartbox" style="height:110px"><canvas id="cGeo"></canvas></div></div>
+  <div class="card"><div class="hd"><h2>Prüfungen</h2></div><table class="tbl" id="qTbl"></table></div>
+</div>
+
+<h2 id="spot">7 Stichprobe: 25 grösste Einzelzuschläge</h2>
+<p>Zur manuellen Kontrolle gegen die Originalpublikation (Link). Werte wie publiziert.</p>
+<div class="tscroll" style="max-height:520px"><table class="tbl" id="spotTbl"></table></div>
+
+<h2 id="limits">8 Grenzen der Analyse</h2>
+<ul>
+<li>simap erfasst nur öffentliche (und dem Beschaffungsrecht unterstellte) Vergaben über den Schwellenwerten; private Bauvorhaben fehlen – dafür dient die GWR-Pipeline.</li>
+<li>Zuschlagswerte sind Vertragswerte (oft inkl. MWST, teils exkl.), keine Schlussabrechnungen; Nachträge erscheinen als eigene Publikationen.</li>
+<li>Zuschläge ohne Preisangabe (v. a. Wettbewerbe, teils freihändige Vergaben) zählen 0; Rahmenverträge sind keine einzelnen Baustellen.</li>
+<li>Die Projektgruppierung ist heuristisch; Firmenzuordnung beruht auf Namensnormalisierung (keine UID). Rollen aus Codes/Stichworten können fehlen oder irren.</li>
+<li>CO₂- und Stromwerte sind Top-down-Schätzungen aus nationalen Kennzahlen, keine projektspezifischen Bilanzen.</li>
+<li>Öffentliches GWR enthält keine Baukosten und keine Bauprojekt-Tabelle; Status und Baujahr werden von den Gemeinden mit Verzögerung nachgeführt.</li>
+<li>Ausschreibungsunterlagen (PDF, Leistungsverzeichnisse) wurden nicht ausgewertet; E-Maschinen-Anforderungen sind daher untererfasst.</li>
+</ul>
+
+<h2 id="repro">9 Reproduzieren</h2>
+<pre class="card" style="overflow:auto;font-size:12px">cd simap_scraping
+python3 scripts/01_scrape_simap_archive.py      # archiv.simap.ch → data/raw/simap_archive/
+python3 scripts/02_scrape_simap_new.py          # simap.ch → data/raw/simap_new/
+python3 scripts/02b_scrape_simap_new_lots.py    # Lose der neuen Plattform
+# GWR: curl -o data/raw/gwr/ch.zip https://public.madd.bfs.admin.ch/ch.zip ; unzip data.sqlite, kodes_codes_codici.csv
+# ElCom: SPARQL data/raw/elcom/municipality_operator.rq an https://ld.admin.ch/query
+python3 scripts/03_prepare_gwr_gazetteer.py     # Gemeinden, PLZ, GWR-Auszug, Netzbetreiber
+python3 scripts/04_build_dataset.py             # notices / projects / firms (JSON + CSV) in data/processed/
+python3 scripts/05_export_web.py                # dashboard/data/*.js</pre>
+    </div>
+  </section>
+</main>
+<script>
+EB.shell("sources.html"); EB.chartDefaults();
+if (innerWidth < 900) document.getElementById("lay").style.gridTemplateColumns = "1fr";
+[["iM","c_month"],["iP","c_proc"],["iV1","c_val"],["iV2","c_val"],["iG","c_geo"]].forEach(([a,b])=>document.getElementById(a).outerHTML=EB.info(b));
+const V = window.VAL, S = V.sanity, FA = V.factors;
+const SRC = [
+  ["simap.ch (neue Plattform)","Verein simap.ch / BKB","Ausschreibungen, Zuschläge, Wettbewerbe ab 1.7.2024: Titel, Beschreibung, CPV/BKP/NPK, Ort, Vergabestelle, Zuschlagsempfänger, Preis, Anzahl Angebote","7/2024–11/2026","REST-API (öffentlich)","https://www.simap.ch/api/specifications/simap.yaml","data/raw/simap_new/"],
+  ["archiv.simap.ch","Verein simap.ch","Publikationen vor 1.7.2024 inkl. Zuschläge mit Preis und Firma","2016–6/2024","REST-API (öffentlich)","https://archiv.simap.ch/api/v3/api-docs","data/raw/simap_archive/"],
+  ["Gebäude- und Wohnungsregister (GWR)","BFS","Gebäude mit Status projektiert/bewilligt/im Bau/bestehend, Baujahr, Fläche, Geschosse, Wohnungen, Heizung, Adressen (Eingänge)","Export 20.11.2026","Öffentlicher Datenbezug (MADD), Stufe A","https://www.housing-stat.ch/de/madd/public.html","data/raw/gwr/"],
+  ["GWR-Kartenlayer «Gebäudestatus»","BFS / swisstopo","Visuelle Kontrolle, Deep-Links je Gebäude (EGID)","aktuell","WMS / REST (geo.admin)","https://map.geo.admin.ch/#/map?lang=de&topic=bfs&layers=ch.bfs.gebaeude_wohnungs_register","–"],
+  ["Strompreise und Netzbetreiber","ElCom","Netzbetreiber je Gemeinde, Tarife 2026 (C3, H4)","2026","LINDAS SPARQL","https://www.strompreis.elcom.admin.ch","data/raw/elcom/"],
+  ["Bauausgaben","BFS Bau- und Wohnbaustatistik","Bauausgaben nach Kanton, Auftraggeber, Hoch-/Tiefbau, Neubau/Umbau","2014–2024","PxWeb-API","https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/","data/raw/bfs/"],
+  ["Wege zu Netto-Null für Baumaschinen","EBP 2025 (zitiert BAFU 2025)","464'067 t CO₂e Baumaschinen 2023; > 500 GWh/a Strombedarf 2050","2023/2050","Projektunterlage (nicht öffentlich verlinkt); Primärquelle BAFU","https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html","–"],
+  ["Hintergrundkarte","swisstopo","Landeskarte grau (WMTS)","aktuell","WMTS","https://www.geo.admin.ch","–"],
+  ["Zefix","EHRA","Handelsregister-Suche je Firma (nur Links)","aktuell","Web","https://www.zefix.ch","–"],
+];
+document.getElementById("srcTbl").innerHTML = `<thead><tr><th>Quelle</th><th>Herausgeber</th><th>Inhalt</th><th>Zeitraum</th><th>Zugriff</th><th>Ablage</th></tr></thead><tbody>`+
+  SRC.map(r=>`<tr><td><a href="${r[5]}" target="_blank" rel="noopener"><b>${r[0]}</b> ↗</a></td><td class="small">${r[1]}</td><td class="small">${r[2]}</td><td class="small">${r[3]}</td><td class="small">${r[4]}</td><td class="small"><code>${r[6]}</code></td></tr>`).join("")+"</tbody>";
+document.getElementById("factorBox").innerHTML = `<dl class="kv">
+  <dt>CO₂-Faktor</dt><dd><b>${EB.n1(FA.CO2_T_PER_MCHF)} t CO₂e / Mio CHF</b> = ${EB.n0(FA.MACHINE_CO2_2023_T)} t (Baumaschinen 2023, BAFU via <a href="${EB.SRC.ebp[1]}" target="_blank">EBP 2025 S. 14</a>) ÷ CHF ${EB.n1(FA.BAUAUSGABEN_2023_KCHF/1e6)} Mrd (Bauausgaben CH 2023, <a href="${EB.SRC.bfs[1]}" target="_blank">BFS</a>)</dd>
+  <dt>Strom-Faktor</dt><dd><b>${EB.n1(FA.ELEC_MWH_PER_MCHF)} MWh / Mio CHF</b> = ${EB.n0(FA.ELEC_2050_MWH/1000)} GWh/a (Baumaschinen 2050, ZERO-E, EBP 2025 S. 10) ÷ Bauausgaben 2023</dd>
+  <dt>Anwendung</dt><dd>× Zuschlagssumme <i>Bauleistungen</i> des Projekts (ohne Planung). Annahme: Maschineneinsatz proportional zum Bauvolumen. Nicht enthalten: Transport/Logistik, graue Energie. Unsicherheit mindestens ± 50 % je Projekt.</dd></dl>`;
+function kpi(l,v,n){ return `<div class="card kpi"><div class="lab">${l}</div><div class="val" style="font-size:22px">${v}</div><div class="note">${n||""}</div></div>`; }
+document.getElementById("kpis").innerHTML = kpi("Publikationen (bereinigt)",EB.n0(S.n_notices),`${S.first_date} – ${S.last_date}`)+kpi("Projekte (Cluster)",EB.n0(S.n_projects),`${EB.n0(S.projects_multi)} mit ≥ 2 Publikationen`)+
+  kpi("Firmen",EB.n0(S.n_firms),"normalisierte Namen")+kpi("Sprachduplikate entfernt",EB.n0(S.dedup.language_versions_removed),"Archiv DE/FR/IT")+
+  kpi("Preis-Wiederholungen",EB.n0(S.dedup.vendor_price_duplicates),EB.chf(S.dedup.vendor_price_duplicate_value)+" nicht doppelt gezählt")+kpi("GWR-verknüpft",EB.n0(S.projects_gwr),"Projekte mit EGID");
+// monthly
+const months = [...new Set(V.monthly.map(m=>m.m))].sort();
+const srcs = ["simap archive","simap.ch"];
+EB.chart("cMonth",{type:"line",data:{labels:months,datasets:srcs.map((s,i)=>({label:s==="simap.ch"?"simap.ch (neu)":"archiv.simap.ch",data:months.map(m=>V.monthly.filter(x=>x.m===m&&x.src===s).reduce((a,x)=>a+x.n,0)||null),borderColor:EB.css(i?"--s2":"--s1"),backgroundColor:EB.css(i?"--s2":"--s1"),borderWidth:2,pointRadius:0,tension:.2,spanGaps:false}))},
+  options:{interaction:{mode:"index",intersect:false},scales:{x:{ticks:{maxTicksLimit:12},grid:{display:false}},y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{position:"top",align:"start"}}}});
+const yrs = [...new Set(V.procs.map(p=>p.year))].sort();
+const PR = ["open","selective","invitation","direct"];
+EB.chart("cProc",{type:"bar",data:{labels:yrs,datasets:PR.map((p,i)=>EB.bar({label:EB.PROC_LABEL[p],backgroundColor:EB.css(["--s1","--s2","--s3","--s4"][i]),data:yrs.map(y=>(V.procs.find(x=>x.year===y&&x.proc===p)||{}).cnt||0),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
+  options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{position:"top",align:"start"},tooltip:{mode:"index"}}}});
+// BFS validation
+const pub = (c)=>V.bfs.find(b=>b.c===c&&b.client==="Öffentliche Auftraggeber"&&b.kind==="Total"&&b.work==="Total");
+const tot = (c)=>V.bfs.find(b=>b.c===c&&b.client==="Total"&&b.kind==="Total"&&b.work==="Total");
+const by = [2016,2017,2018,2019,2020,2021,2022,2023,2024];
+const simY = (y)=>V.sim.filter(s=>s.year===y&&s.ctype==="construction").reduce((a,s)=>a+s.val,0);
+const ch = pub("CH"), cht = tot("CH");
+const cov = by.map(y=>ch&&ch.v[y]?100*simY(y)/(ch.v[y]*1000):null);
+EB.chart("cCov",{type:"bar",data:{labels:by,datasets:[EB.bar({label:"Abdeckung",backgroundColor:by.map(y=>y===2024?EB.css("--muted"):EB.css("--s1")),data:cov})]},
+  options:{scales:{x:EB.axisPlain,y:{ticks:{callback:v=>v+" %"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n1(c.raw)} %`,afterLabel:c=>`simap ${EB.chf(simY(by[c.dataIndex]))} / BFS öff. ${EB.chf(ch.v[by[c.dataIndex]]*1000)}${by[c.dataIndex]===2024?" (Bruchjahr)":""}`}}}}});
+const cc = EB.CANTONS.map(c=>{ const b=pub(c); if(!b) return [c,null]; let s=0,t=0; for(const y of by.slice(0,8)){ s+=V.sim_canton.filter(x=>x.year===y&&x.canton===c).reduce((a,x)=>a+x.value,0); t+=(b.v[y]||0)*1000; } return [c,t?100*s/t:null]; }).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);
+EB.chart("cCovC",{type:"bar",data:{labels:cc.map(c=>c[0]),datasets:[EB.bar({label:"Abdeckung",backgroundColor:EB.css("--s1"),data:cc.map(c=>c[1])})]},
+  options:{onClick:(e,els)=>{ if(!els.length) return; EB.filters.cantons=[cc[els[0].index][0]]; EB.saveFilters(); location.href="index.html"; },
+    scales:{x:EB.axisPlain,y:{ticks:{callback:v=>v+" %"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n1(c.raw)} %`,footer:()=>"Klick: Übersicht für diesen Kanton"}}}}});
+document.getElementById("valTbl").innerHTML = `<thead><tr><th>Jahr</th><th class="num">simap Zuschläge Bau</th><th class="num">Anzahl</th><th class="num">BFS Bauausgaben öffentlich</th><th class="num">BFS Bauausgaben total</th><th class="num">Abdeckung öff.</th></tr></thead><tbody>`+
+  by.map((y,i)=>`<tr><td>${y}</td><td class="num">${EB.chf(simY(y))}</td><td class="num">${EB.n0(V.sim.filter(s=>s.year===y&&s.ctype==="construction").reduce((a,s)=>a+s.cnt,0))}</td><td class="num">${EB.chf(ch.v[y]*1000)}</td><td class="num">${EB.chf(cht.v[y]*1000)}</td><td class="num">${EB.n1(cov[i])} %</td></tr>`).join("")+
+  `<tr><td>2025</td><td class="num">${EB.chf(simY(2025))}</td><td class="num">${EB.n0(V.sim.filter(s=>s.year===2025&&s.ctype==="construction").reduce((a,s)=>a+s.cnt,0))}</td><td class="num muted" colspan="3">BFS-Werte noch nicht publiziert</td></tr></tbody>`;
+// geo
+const GL = {"address (GWR)":"GWR-Adresse","postcode":"PLZ","municipality":"Gemeinde","authority":"Vergabestelle","none":"keine"};
+const gk = Object.keys(GL);
+EB.chart("cGeo",{type:"bar",data:{labels:[""],datasets:gk.map((k,i)=>({label:GL[k],data:[S.geo_project[k]||0],backgroundColor:["#104281","#2a78d6","#86b6ef",EB.css("--warning"),EB.css("--muted")][i],borderWidth:{right:2},borderColor:EB.css("--surface"),borderSkipped:false,borderRadius:3,barThickness:28}))},
+  options:{indexAxis:"y",scales:{x:{stacked:true,display:false},y:{stacked:true,display:false}},plugins:{legend:{position:"bottom",align:"start"},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)} (${EB.n1(100*c.raw/S.n_projects)} %)`}}}}});
+const ok=(b)=>b?'<span style="color:var(--good)">✔</span>':'<span style="color:var(--serious)">▲</span>';
+document.getElementById("qTbl").innerHTML = `<tbody>
+  <tr><td>${ok(S.award_value_share>0.85)}</td><td>Zuschläge mit Preisangabe</td><td class="num">${EB.n1(100*S.award_value_share)} %</td></tr>
+  <tr><td>${ok(S.awards_without_vendor<2000)}</td><td>Zuschläge ohne Firmenangabe</td><td class="num">${EB.n0(S.awards_without_vendor)}</td></tr>
+  <tr><td>${ok(true)}</td><td>Ausgeschlossene Werte (Nicht-CHF / > 2 Mrd)</td><td class="num">${Object.entries(S.value_flags).filter(([k])=>k).map(([k,v])=>v).reduce((a,b)=>a+b,0)}</td></tr>
+  <tr><td>${ok(S.framework_share<0.1)}</td><td>Anteil Rahmenverträge an Zuschlagssumme</td><td class="num">${EB.n1(100*S.framework_share)} %</td></tr>
+  <tr><td>${ok(true)}</td><td>Gemeinden mit Netzbetreiber (ElCom)</td><td class="num">${S.mun_with_dso} / ${S.mun_total}</td></tr>
+  <tr><td>${ok(((S.geo_project.authority||0)+(S.geo_project.none||0))/S.n_projects<0.15)}</td><td>Projekte ohne Ausführungsort (Vergabestelle/keine)</td><td class="num">${EB.n1(100*((S.geo_project.authority||0)+(S.geo_project.none||0))/S.n_projects)} %</td></tr>
+  <tr><td>${ok(true)}</td><td>Scraping-Fehler (Archiv/neu)</td><td class="num">0 / 0</td></tr>
+  <tr><td>${ok(false)}</td><td>Strukturbruch 7/2024 (siehe Abschnitt 4)</td><td class="num">dokumentiert</td></tr></tbody>`;
+document.getElementById("spotTbl").innerHTML = `<thead><tr><th>Datum</th><th>Titel</th><th>Vergabestelle</th><th class="num">Wert</th><th>Quelle</th></tr></thead><tbody>`+
+  S.top_awards.map(a=>`<tr><td class="small">${a.date}</td><td>${EB.esc(a.title)}</td><td class="small">${EB.esc(a.auth)}</td><td class="num">${EB.chf(a.value)}</td><td><a href="${a.url}" target="_blank" rel="noopener">${a.src} ↗</a></td></tr>`).join("")+"</tbody>";
+</script>
+</body>
+</html>

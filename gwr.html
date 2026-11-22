@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GWR-Pipeline · Baustellen-Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/gwr.js"></script><script src="data/municipalities.js"></script>
+<script src="assets/core.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead"><div><h1>GWR-Pipeline: projektierte, bewilligte und im Bau befindliche Gebäude</h1>
+    <p>Alle Gebäude im eidg. Gebäude- und Wohnungsregister (BFS, Export 20.11.2026) mit Status projektiert, bewilligt oder im Bau, sowie Fertigstellungen seit 2016. Umfasst private und öffentliche Bauherren – im Gegensatz zu simap, das nur öffentliche Vergaben zeigt. Hochbau only; Tiefbau ist im GWR nicht erfasst.</p></div></div>
+  <div class="filters">
+    <div class="fgroup"><span class="flabel">Kanton</span><select id="fC"><option value="">alle</option></select></div>
+    <div class="fgroup"><span class="flabel">Status</span><span id="fS"></span></div>
+    <div class="fgroup"><span class="flabel">Gebäudegrösse</span><select id="fZ"><option value="0">alle</option><option value="500">≥ 500 m² Geschossfl.</option><option value="1500">≥ 1500 m²</option><option value="5000">≥ 5000 m²</option></select></div>
+    <div class="fgroup"><span class="flabel">Versorger</span><input type="text" id="fD" list="dL" placeholder="Netzbetreiber…" style="width:200px"><datalist id="dL"></datalist></div>
+    <span class="fcount" id="cnt"></span>
+  </div>
+  <section class="grid g-kpi" id="kpis"></section>
+  <section class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.45fr);margin-top:14px" id="row1">
+    <div class="card"><div class="hd"><h2>Pipeline nach Kanton</h2><span id="i1"></span><span class="hint">Klick filtert · Anzahl Gebäude</span></div><div class="chartbox" style="height:440px"><canvas id="cCan"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Karte</h2><span id="i2"></span></div><div id="map" class="map"></div><div class="legend" id="leg" style="margin-top:8px"></div></div>
+  </section>
+  <section class="card" style="margin-top:14px">
+    <div class="hd" style="flex-wrap:wrap;gap:10px"><h2>Flex-Pool: aktive Baustellen je Netzbetreiber</h2><span id="iF"></span>
+      <span class="hint" style="margin-left:0">Klick auf Balken oder Kreis = Netzbetreiber filtern</span>
+      <span style="margin-left:auto" class="fgroup"><span class="flabel">mittel ab</span><select id="fpMin"><option value="500">500 m²</option><option value="1000">1'000 m²</option><option value="1500">1'500 m²</option></select>
+      <span class="flabel">gross ab</span><select id="fpBig"><option value="5000">5'000 m²</option><option value="10000">10'000 m²</option></select>
+      <label class="toggle"><input type="checkbox" id="fpProj">inkl. projektiert</label><span id="mbFP"></span></span></div>
+    <p class="small muted" style="margin:-4px 0 10px">Für einen Versorger ist eine einzelne Baustelle Rauschen; alle Baustellen in seinem Netzgebiet bilden einen Pool temporärer Lasten. Gezählt: bewilligte und im Bau befindliche mittlere und grosse Gebäude (GWR) je Verteilnetzbetreiber (ElCom 2026; bei mehreren Betreibern pro Gemeinde der erstgenannte).</p>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)" id="fpLay">
+      <div class="chartbox" style="height:620px"><canvas id="cFP"></canvas></div>
+      <div><div id="fpMap" class="map" style="height:620px"></div><div class="legend" id="fpLeg" style="margin-top:6px"></div></div>
+    </div>
+  </section>
+  <section class="grid g3" style="margin-top:14px">
+    <div class="card"><div class="hd"><h2>Fertigstellungen pro Jahr</h2><span id="i3"></span><span class="sub">Geschossfläche (m²), alle Grössen</span></div><div class="chartbox"><canvas id="cDone"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Gebäudekategorien in der Pipeline</h2><span id="i4"></span><span class="hint">Klick filtert · Top 10, Anzahl</span></div><div class="chartbox"><canvas id="cCls"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Grösse der Pipeline-Gebäude</h2><span id="i5"></span><span class="hint">Klick filtert · Anzahl nach Geschossfläche</span></div><div class="chartbox"><canvas id="cSize"></canvas></div></div>
+  </section>
+  <section class="card" style="margin-top:14px"><div class="hd"><h2>Grösste Gebäude in der Pipeline</h2><span id="i6"></span><span class="sub">nach Geschossfläche</span><span id="mbG" style="margin-left:10px"></span></div>
+    <div class="tscroll" style="max-height:480px"><table class="tbl" id="tbl"></table></div></section>
+</main>
+<script>
+EB.shell("gwr.html"); EB.chartDefaults();
+["i1","i2","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
+const G = window.GWR, GC = G.cols, MUN = window.MUN;
+const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
+const st = { sel:[0,1,2], c:"", z:0, d:"", cls:null, sb:null };
+document.getElementById("fC").innerHTML += EB.CANTONS.map(c=>`<option>${c}</option>`).join("");
+document.getElementById("dL").innerHTML = [...new Set(Object.values(MUN).flatMap(m=>(m[2]||"").split(" | ")).filter(Boolean))].sort().map(d=>`<option value="${EB.esc(d)}">`).join("");
+const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau"), EB.css("--gwr-done")];
+function chips(){ document.getElementById("fS").innerHTML = G.status.slice(0,3).map((s,i)=>`<button class="chip ${st.sel.includes(i)?"on":""}" data-i="${i}">${s}</button>`).join("");
+  document.querySelectorAll("#fS [data-i]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; st.sel = st.sel.includes(i)?st.sel.filter(x=>x!==i):[...st.sel,i]; chips(); draw(); }); }
+document.getElementById("fC").onchange=e=>{st.c=e.target.value; draw();};
+document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
+document.getElementById("fD").onchange=e=>{st.d=e.target.value.trim(); draw();};
+const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
+const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`,
+  onClick:p=>window.open(EB.lnk.gwrRec(p.g.egid),"_blank")}); layer.addTo(map); EB.gwrWms().addTo(map);
+function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
+function draw(){
+  const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
+  const inBin = (g,i) => i===5 ? !g.fa : g.fa>=bins[i][0]&&g.fa<bins[i][1];
+  const pass = (g, skip) => g.st<3&&st.sel.includes(g.st)&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
+  const pipe = GL.filter(g=>pass(g));
+  const pipeC = GL.filter(g=>pass(g,"c")), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
+  const tag = [st.cls!=null?"Kategorie: "+G.classes[st.cls]:"", st.sb!=null?"Grösse: "+(bins[st.sb]||[0,0,"unbekannt"])[2]:""].filter(Boolean);
+  document.getElementById("cnt").innerHTML = (tag.length?`<button class="chip on" id="clrX">✕ ${tag.join(" · ")}</button> `:"")+`<b>${EB.n0(pipe.length)}</b> Gebäude in der Pipeline`;
+  if (tag.length) document.getElementById("clrX").onclick=()=>{ st.cls=null; st.sb=null; draw(); };
+  const by = [0,1,2].map(s=>pipe.filter(g=>g.st===s));
+  const fa = (a)=>a.reduce((s,g)=>s+(g.fa||0),0), dw=(a)=>a.reduce((s,g)=>s+(g.dw||0),0);
+  const doneN = G.done.filter(d=>(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[2],0);
+  document.getElementById("kpis").innerHTML = kpi("c_gwr","Projektiert",EB.n0(by[0].length),EB.n0(fa(by[0]))+" m² Geschossfläche")+kpi("c_gwr","Bewilligt",EB.n0(by[1].length),EB.n0(fa(by[1]))+" m²")+
+    kpi("c_gwr","Im Bau",EB.n0(by[2].length),EB.n0(fa(by[2]))+" m²")+kpi("c_gwr","Wohnungen in Pipeline",EB.n0(dw(pipe)),"geplante Wohnungen (GANZWHG)")+
+    kpi("c_gwr","Fertiggestellt seit 2016",EB.n0(doneN),"Gebäude (Baujahr ≥ 2016)")+kpi("c_gwr","Grosse Gebäude ≥ 5000 m²",EB.n0(pipe.filter(g=>(g.fa||0)>=5000).length),"in der Pipeline – relevante Baustellen-Lasten");
+  const gc = gcol();
+  const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>b[1].reduce((x,y)=>x+y)-a[1].reduce((x,y)=>x+y));
+  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],!st.c||st.c===c[0])),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
+    options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; st.c = st.c===c?"":c; document.getElementById("fC").value=st.c; draw(); },
+    plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); }},tooltip:{mode:"index",callbacks:{footer:()=>"Klick: Kanton filtern · Legende: Status"}}}}});
+  const yrs = [...new Set(G.done.map(d=>d[0]))].filter(y=>y>=2016&&y<=2026).sort();
+  EB.chart("cDone",{type:"bar",data:{labels:yrs,datasets:[EB.bar({label:"Geschossfläche",backgroundColor:gc[3],data:yrs.map(y=>G.done.filter(d=>d[0]===y&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[3],0))})]},
+    options:{scales:{x:EB.axisPlain,y:{ticks:{callback:v=>EB.n0(v/1e6)+" Mio m²"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.n0(c.raw)+" m²",afterLabel:c=>EB.n0(G.done.filter(d=>d[0]===yrs[c.dataIndex]&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[2],0))+" Gebäude"}}}}});
+  const cc = {}; pipeK.forEach(g=>{ cc[g.cls]=(cc[g.cls]||0)+1; });
+  const cl = Object.entries(cc).map(([k,v])=>[G.classes[k],v,+k]).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  EB.chart("cCls",{type:"bar",data:{labels:cl.map(c=>c[0]),datasets:[EB.bar({label:"Gebäude",backgroundColor:cl.map(c=>EB.dim(EB.css("--s1"),st.cls==null||st.cls===c[2])),data:cl.map(c=>c[1])})]},options:{indexAxis:"y",scales:{x:{grid:{color:()=>EB.css("--grid")},border:{display:false}},y:EB.axisPlain},
+    onClick:(e,els)=>{ if(!els.length) return; const k=cl[els[0].index][2]; st.cls = st.cls===k?null:k; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Kategorie filtern"}}}}});
+  EB.chart("cSize",{type:"bar",data:{labels:bins.map(b=>b[2]).concat(["unbekannt"]),datasets:[EB.bar({label:"Gebäude",backgroundColor:["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")].map((c,i)=>EB.dim(c,st.sb==null||st.sb===i)),data:[0,1,2,3,4,5].map(i=>pipeS.filter(g=>inBin(g,i)).length)})]},
+    options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const i=els[0].index; st.sb = st.sb===i?null:i; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Grösse filtern"}}}}});
+  drawFlex();
+  layer.setPoints(pipe.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa?Math.max(1.6,Math.min(9,Math.sqrt(g.fa)/12)):1.6,g})));
+  document.getElementById("leg").innerHTML = G.status.slice(0,3).map((t,i)=>`<span><span class="swatch" style="background:${gc[i]};border-radius:50%"></span>${t}</span>`).join("")+'<span class="muted">Grösse ∝ Geschossfläche · offizieller GWR-Layer ab Zoom 13</span>';
+  const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
+  document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
+    top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
+      <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${EB.esc(g.dso||"–")}</td>
+      <td class="small"><a href="${EB.lnk.gwrRec(g.egid)}" target="_blank" rel="noopener">GWR ${g.egid} ↗</a><br><a href="${EB.lnk.gwrMap(g.lat,g.lon)}" target="_blank" rel="noopener">Karte ↗</a></td></tr>`).join("")+"</tbody>";
+}
+let TOP = [], FP = [];
+if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
+const fpMap = EB.baseMap("fpMap"); 
+const fpLayer = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, onClick:p=>window.open(EB.lnk.gwrRec(p.g.egid),"_blank")}); fpSites.addTo(fpMap);
+["fpMin","fpBig","fpProj"].forEach(i=>document.getElementById(i).onchange=()=>draw());
+const selDso = (d) => { st.d = st.d===d ? "" : d; document.getElementById("fD").value = st.d; draw(); };
+function drawFlex(){
+  const mn = +document.getElementById("fpMin").value, big = +document.getElementById("fpBig").value, inclP = document.getElementById("fpProj").checked;
+  const acc = {};
+  GL.forEach(g=>{ if (g.st>2 || (g.st===0&&!inclP) || !(g.fa>=mn) || (st.c&&g.canton!==st.c)) return; const op=(g.dso||"").split(" | ")[0]; if(!op) return;
+    const o = acc[op] = acc[op] || {op, n:0, big:0, lat:0, lon:0, fa:0, sites:[]}; o.n++; if (g.fa>=big) o.big++; o.lat+=g.lat; o.lon+=g.lon; o.fa+=g.fa; o.sites.push(g); });
+  FP = Object.values(acc).sort((a,b)=>b.n-a.n);
+  const top = FP.slice(0,25); if (st.d && !top.find(o=>o.op===st.d) && acc[st.d]) top.push(acc[st.d]);
+  const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op;
+  EB.chart("cFP",{type:"bar",data:{labels:top.map(o=>o.op.length>40?o.op.slice(0,39)+"…":o.op),datasets:[
+      EB.bar({label:`gross (≥ ${EB.n0(big)} m²)`,data:top.map(o=>o.big),backgroundColor:top.map(o=>EB.dim(c2,on(o))),borderColor:EB.css("--surface"),borderWidth:{right:2},borderRadius:0,borderSkipped:false}),
+      EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>EB.dim(c1,on(o)))})]},
+    options:{indexAxis:"y",scales:{x:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}},y:Object.assign({stacked:true,ticks:{autoSkip:false,font:{size:11}}},EB.axisPlain)},
+      onClick:(e,els)=>{ if(els.length) selDso(top[els[0].index].op); },
+      plugins:{legend:{position:"top",align:"start"},tooltip:{mode:"index",callbacks:{title:it=>top[it[0].dataIndex].op,footer:it=>{const o=top[it[0].dataIndex]; return `${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross\n${EB.n0(o.fa)} m² Geschossfläche\nKlick: Netzbetreiber filtern`;}}}}}});
+  fpLayer.clearLayers();
+  const maxN = FP.length ? FP[0].n : 1, gc = gcol();
+  FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
+    L.circleMarker([o.lat/o.n,o.lon/o.n],{radius:r,weight:1.5,color:EB.css("--surface"),fillColor:st.d===o.op?EB.css("--accent"):c2,fillOpacity:st.d&&st.d!==o.op?0.15:0.55})
+      .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op)).addTo(fpLayer); });
+  const sel = st.d && acc[st.d];
+  fpSites.setPoints(sel ? sel.sites.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa>=big?6:3.5,g})) : []);
+  if (sel) fpMap.fitBounds(L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])).pad(0.1), {maxZoom:13});
+  document.getElementById("fpLeg").innerHTML = `<span><span class="swatch" style="background:${c2};border-radius:50%;opacity:.6"></span>Kreis = Schwerpunkt der Baustellen eines Netzbetreibers, Fläche ∝ Anzahl</span>`+
+    (sel ? `<span><span class="swatch" style="background:${gc[1]};border-radius:50%"></span>bewilligt</span><span><span class="swatch" style="background:${gc[2]};border-radius:50%"></span>im Bau</span><button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>` : "");
+  const b = document.getElementById("fpClr"); if (b) b.onclick = () => { selDso(st.d);  };
+}
+document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
+document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
+document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
+document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrRec(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
+chips(); draw(); document.addEventListener("eb-redraw", draw);
+</script>
+</body>
+</html>

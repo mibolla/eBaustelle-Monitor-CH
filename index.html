@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baustellen-Monitor CH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/projects.js"></script><script src="data/firms.js"></script>
+<script src="assets/core.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead"><div><h1>Öffentliche Baustellen in der Schweiz, 2016–2026</h1>
+    <p>Bau- und Planungsvergaben aus simap.ch (inkl. Archiv), zu Projekten gruppiert, verortet und mit GWR, Netzbetreiber (ElCom) und BFS-Baustatistik verknüpft. Kontext: Elektrifizierung von Baustellen (E-Baustelle / SITE4GRID).</p></div></div>
+  <div class="filters" id="filters"></div>
+
+  <section class="grid g-kpi" id="kpis"></section>
+
+  <section class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);margin-top:14px" id="row1">
+    <div class="card"><div class="hd"><h2>Zuschlagssumme nach Jahr und Bauart</h2><span id="i1"></span><span class="hint">Klick auf Balken = Jahr + Bauart filtern · Legende = Bauart</span></div><div class="chartbox tall"><canvas id="cYear" role="img" aria-label="Zuschlagssumme nach Jahr"></canvas></div>
+      <div class="warnbox" style="margin-top:8px">Strukturbruch Juli 2024 (neue simap-Plattform, revidiertes Beschaffungsrecht): Werte vor und nach 2024 nur eingeschränkt vergleichbar. <a href="sources.html#break">Details</a></div></div>
+    <div class="card"><div class="hd"><h2>Projekte auf der Karte</h2><span id="i2"></span><label class="toggle" style="margin-left:auto"><input type="checkbox" id="bboxF">Kartenausschnitt filtert alles</label><a class="sub" href="map.html" style="margin-left:10px">Grosse Karte →</a></div><div id="miniMap" class="map"></div>
+      <div class="legend" id="mapLegend" style="margin-top:8px"></div></div>
+  </section>
+
+  <section class="grid g3" style="margin-top:14px">
+    <div class="card"><div class="hd"><h2>Nach Kanton</h2><span id="i3"></span><span class="hint">Klick = Kanton · Shift = mehrere</span></div><div class="chartbox tall"><canvas id="cCanton"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Grössenklassen</h2><span id="i4"></span><span class="hint">Klick = filtern</span></div><div class="chartbox"><canvas id="cSize"></canvas></div>
+      <div class="hd" style="margin-top:12px"><h2>Vergabeart</h2><span id="i5"></span><span class="hint">Klick auf Segment/Legende</span></div><div class="chartbox short" style="height:110px"><canvas id="cProc"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Planer und Gewerke</h2><span id="i6"></span><span class="hint">Klick = Rolle filtern</span></div><div class="chartbox tall"><canvas id="cRoles"></canvas></div></div>
+  </section>
+
+  <section class="grid g2" style="margin-top:14px">
+    <div class="card"><div class="hd"><h2>Energieversorger im Projektgebiet</h2><span id="i7"></span><span class="hint">Klick = Versorger filtern</span></div><div class="chartbox tall"><canvas id="cDso"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Wichtigste Firmen</h2><span id="i8"></span><span class="sub">in gefilterten Projekten</span></div>
+      <div class="tabs" id="firmTabs"></div><div class="tscroll" style="max-height:300px"><table class="tbl" id="firmTbl"></table></div></div>
+  </section>
+
+  <section class="grid g2" style="margin-top:14px">
+    <div class="card"><div class="hd"><h2>Projekte mit Hinweis auf E-Baumaschinen / CO₂</h2><span id="i10"></span><span class="hint">Klick auf Linie/Legende = Merkmal filtern</span></div><div class="chartbox"><canvas id="cEm"></canvas></div></div>
+    <div class="card"><div class="hd"><h2>Versorger als Bauherr und Netzarbeiten</h2><span id="i11"></span><span class="hint">Klick = Merkmal + Jahr</span></div><div class="chartbox"><canvas id="cUtil"></canvas></div></div>
+  </section>
+  <section class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);margin-top:14px" id="lastRow">
+    <div class="card"><div class="hd"><h2>Gemeinden mit den meisten mittleren und grossen Baustellen</h2><span id="i12"></span><span style="margin-left:auto"></span><span id="mbMun"></span></div>
+      <div class="tscroll" style="max-height:440px"><table class="tbl" id="munTbl"></table></div>
+      <div class="small muted" style="margin-top:6px">Mittel = 1–20 Mio, gross = ≥ 20 Mio CHF Zuschlagssumme. Zeile anklicken: Projekte der Gemeinde auf der Karte.</div></div>
+    <div class="card"><div class="hd"><h2>Grösste Projekte</h2><span id="i9"></span><span style="margin-left:auto"></span><span id="mbTop"></span><a class="sub" href="projects.html" style="margin-left:10px">Alle Projekte →</a></div>
+      <div class="tscroll" style="max-height:440px"><table class="tbl" id="topTbl"></table></div></div>
+  </section>
+</main>
+<script>
+EB.shell("index.html"); EB.chartDefaults();
+const P = EB.projects(); EB.firms(); const PR = window.PROJ;
+[["i1","c_year"],["i2","c_map"],["i3","c_canton"],["i4","c_size"],["i5","c_proc"],["i6","c_roles"],["i7","c_util"],["i8","c_firms"],["i9","k_value"],["i10","k_emach"],["i11","c_util"],["i12","c_util"]].forEach(([a,b])=>document.getElementById(a).outerHTML=EB.info(b));
+const TCOL = () => EB.TYPE_COLOR.map(EB.css);
+let map, layer, firmRole = "contractor", bbox = null;
+const sum = (a,k)=>a.reduce((s,p)=>s+(p[k]||0),0);
+const inBox = (p) => !bbox || (p.lat && bbox.contains([p.lat,p.lon]));
+// projects for a chart: all filters except the chart's own dimension(s), plus optional map extent
+const base = (...keys) => EB.filteredExcept(...keys).filter(inBox);
+function kpi(id, label, val, note, flag){ const on = flag && EB.filters[flag];
+  return `<div class="card kpi ${flag?"click":""} ${on?"active":""}" ${flag?`data-kflag="${flag}" title="Klick: nur Projekte mit diesem Merkmal"`:""}><div class="lab">${label}${EB.info(id)}</div><div class="val">${val}</div><div class="note">${note||""}</div></div>`; }
+function draw(){
+  const F = EB.filtered().filter(inBox); EB.setCount(F.length, P.length);
+  const v = sum(F,"value"), vw = sum(F,"vw"), co2 = sum(F,"co2"), el = sum(F,"elec");
+  const firmSet = new Set(); F.forEach(p=>[...p.con,...p.arch,...p.eplan,...p.einst].forEach(i=>firmSet.add(i)));
+  const em = F.filter(p=>p.emach).length, cm = F.filter(p=>p.co2m).length;
+  document.getElementById("kpis").innerHTML =
+    kpi("k_projects","Projekte",EB.n0(F.length),`${EB.n0(F.filter(p=>p.na>0).length)} mit Zuschlag · ${EB.n0(F.filter(p=>p.open).length)} nur ausgeschrieben`)+
+    kpi("k_value","Zuschlagssumme",EB.chf(v),`davon Bau ${EB.chf(vw,true)}, Planung ${EB.chf(v-vw,true)}`)+
+    kpi("k_co2","CO₂ Baumaschinen (Schätzung)",EB.n0(co2/1000)+" kt","CO₂e, direkte Maschinenemissionen")+
+    kpi("k_elec","Strom bei Elektrifizierung",EB.n0(el/1000)+" GWh","indikativ, ganze Bauzeit")+
+    kpi("k_firms","Firmen (Top-Rollen)",EB.n0(firmSet.size),"Bau, Architektur, Elektro")+
+    kpi("k_emach","E-Maschinen erwähnt",EB.n1(F.length?100*em/F.length:0)+" %",`${EB.n0(em)} Projekte · Klick filtert`,"emach");
+  document.querySelectorAll("[data-kflag]").forEach(k=>k.onclick=(e)=>{ if(!e.target.closest("[data-info]")) EB.toggleFlag(k.dataset.kflag); });
+  const tc = TCOL(), f = EB.filters;
+
+  // 1 year x type (own dims: years, types)
+  const BY = base("y0","y1","types");
+  const yrs = EB.YEARS;
+  EB.chart("cYear",{type:"bar",data:{labels:yrs,datasets:PR.types.map((t,ti)=>EB.bar({label:t,
+      backgroundColor:yrs.map(y=>EB.dim(tc[ti], EB.yearOn(y) && (!f.types.length||f.types.includes(ti)))),
+      data:yrs.map(y=>BY.filter(p=>p.year===y&&p.type===ti).reduce((s,p)=>s+(p.value||0),0))}))},
+    options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:Object.assign({stacked:true},EB.axisMoney)},
+      onClick:(e,els)=>{ if(!els.length) return; const el=els[0]; const y=yrs[el.index], t=el.datasetIndex;
+        const same = f.y0===y&&f.y1===y&&f.types.length===1&&f.types[0]===t;
+        if (e.native.shiftKey) { EB.setYear(y,e); return; }
+        if (same) { f.y0=2016; f.y1=2026; f.types=[]; } else { f.y0=f.y1=y; f.types=[t]; } EB.apply(); },
+      plugins:{tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.chf(c.raw)}`,footer:it=>"Total: "+EB.chf(it.reduce((s,c)=>s+c.raw,0))+"\nKlick: Jahr + Bauart filtern"}},
+        legend:{position:"top",align:"start",onClick:(e,item)=>EB.toggleIn("types",item.datasetIndex,e),
+          labels:{generateLabels:ch=>PR.types.map((t,i)=>({text:t,fillStyle:EB.dim(tc[i],!f.types.length||f.types.includes(i)),strokeStyle:"transparent",datasetIndex:i,fontColor:EB.css("--text-2"),borderRadius:3}))}}}}});
+
+  // 2 canton
+  const BC = base("cantons"); const byC = {};
+  BC.forEach(p=>{ if(p.canton&&p.geo<=3) byC[p.canton]=(byC[p.canton]||0)+(p.value||0); });
+  let cs = Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  f.cantons.forEach(c=>{ if(!cs.find(x=>x[0]===c)) cs.push([c,byC[c]||0]); });
+  EB.chart("cCanton",{type:"bar",data:{labels:cs.map(c=>c[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:cs.map(c=>c[1]),
+      backgroundColor:cs.map(c=>EB.dim(EB.css("--s1"),!f.cantons.length||f.cantons.includes(c[0])))})]},
+    options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Kanton filtern"}}},
+      onClick:(e,els)=>{ if(els.length) EB.toggleIn("cantons",cs[els[0].index][0],e); }}});
+
+  // 3 size (ordinal ramp)
+  const BS = base("sizes"); const ramp = ["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")];
+  EB.chart("cSize",{type:"bar",data:{labels:PR.sizes,datasets:[EB.bar({label:"Projekte",data:PR.sizes.map((s,i)=>BS.filter(p=>p.size===i).length),
+      backgroundColor:ramp.map((c,i)=>EB.dim(c,!f.sizes.length||f.sizes.includes(i)))})]},
+    options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n0(c.raw)} Projekte`,footer:()=>"Klick: Grösse filtern"}}},
+      onClick:(e,els)=>{ if(els.length) EB.toggleIn("sizes",els[0].index,e); }}});
+
+  // 4 procedure
+  const BP = base("procs"); const pc = ["--s1","--s2","--s3","--s4"].map(EB.css);
+  EB.chart("cProc",{type:"bar",data:{labels:[""],datasets:["open","selective","invitation","direct"].map((k,i)=>({label:EB.PROC_LABEL[k],data:[BP.filter(p=>p.proc===i).length],
+      backgroundColor:EB.dim(pc[i],!f.procs.length||f.procs.includes(i)),borderWidth:{right:2},borderColor:EB.css("--surface"),borderSkipped:false,borderRadius:3,barThickness:26}))},
+    options:{indexAxis:"y",scales:{x:{stacked:true,display:false},y:{stacked:true,display:false}},
+      onClick:(e,els)=>{ if(els.length) EB.toggleIn("procs",els[0].datasetIndex,e); },
+      plugins:{legend:{position:"bottom",align:"start",onClick:(e,item)=>EB.toggleIn("procs",item.datasetIndex,e)},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)} (${EB.n1(100*c.raw/Math.max(1,BP.length))} %)`}}}}});
+
+  // 5 roles
+  const BR = base("roles"); const lab = PR.role_label;
+  const rc = PR.roles.map((r,i)=>[i,lab[r],BR.filter(p=>p.roles.includes(i)).length]).sort((a,b)=>b[2]-a[2]);
+  EB.chart("cRoles",{type:"bar",data:{labels:rc.map(r=>r[1]),datasets:[EB.bar({label:"Projekte",data:rc.map(r=>r[2]),backgroundColor:rc.map(r=>EB.dim(EB.css("--s1"),!f.roles.length||f.roles.includes(r[0])))})]},
+    options:{indexAxis:"y",scales:{x:{grid:{color:()=>EB.css("--grid")},border:{display:false}},y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${EB.n0(c.raw)} Projekte`,footer:()=>"Klick: Rolle filtern"}}},
+      onClick:(e,els)=>{ if(els.length) EB.toggleIn("roles",rc[els[0].index][0],e); }}});
+
+  // 6 DSO
+  const BD = base("dso"); const byD = {};
+  BD.forEach(p=>{ (p.dsoName||"").split(" | ").filter(Boolean).forEach(d=>{ byD[d]=(byD[d]||0)+(p.value||0); }); });
+  let dd = Object.entries(byD).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  if (f.dso && !dd.find(d=>d[0]===f.dso)) dd.push([f.dso, byD[f.dso]||0]);
+  EB.chart("cDso",{type:"bar",data:{labels:dd.map(d=>d[0].length>34?d[0].slice(0,33)+"…":d[0]),datasets:[EB.bar({label:"Zuschlagssumme",data:dd.map(d=>d[1]),backgroundColor:dd.map(d=>EB.dim(EB.css("--s1"),!f.dso||f.dso===d[0]))})]},
+    options:{indexAxis:"y",scales:{x:EB.axisMoney,y:EB.axisPlain},plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>dd[it[0].dataIndex][0],label:c=>" "+EB.chf(c.raw),footer:()=>"Klick: Versorger filtern"}}},
+      onClick:(e,els)=>{ if(!els.length) return; const d=dd[els[0].index][0]; f.dso = f.dso===d ? "" : d; EB.apply(); }}});
+
+  // 7 e-machines / CO2 trend (own dims: flags + years)
+  const BE = base("emach","co2m","y0","y1");
+  const lineDs = (k,label,col)=>({label,data:yrs.map(y=>BE.filter(p=>p.year===y&&p[k]).length),borderColor:EB.dim(col,!f.emach&&!f.co2m||f[k]),backgroundColor:yrs.map(y=>EB.dim(col,EB.yearOn(y))),borderWidth:2,pointRadius:4,pointHoverRadius:7,_k:k});
+  EB.chart("cEm",{type:"line",data:{labels:yrs,datasets:[lineDs("emach","E-Baumaschinen erwähnt",EB.css("--s1")),lineDs("co2m","CO₂/Nachhaltigkeit erwähnt",EB.css("--s2"))]},
+    options:{interaction:{mode:"nearest",intersect:false},scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false},ticks:{precision:0}}},
+      onClick:(e,els)=>{ if(!els.length) return; const k=els[0].datasetIndex?"co2m":"emach", y=yrs[els[0].index];
+        if (f[k] && f.y0===y && f.y1===y) { f[k]=false; f.y0=2016; f.y1=2026; } else { f[k]=true; f.y0=f.y1=y; } EB.apply(); },
+      plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>EB.toggleFlag(item.datasetIndex?"co2m":"emach")},tooltip:{callbacks:{footer:()=>"Klick: Merkmal + Jahr filtern"}}}}});
+
+  // 8 utility as client / grid works
+  const BU = base("util","grid","y0","y1");
+  EB.chart("cUtil",{type:"bar",data:{labels:yrs,datasets:[["util","Versorger ist Bauherr","--s1"],["grid","Netz-/Ladeinfrastruktur-Arbeiten","--s2"]].map(([k,l,c])=>EB.bar({label:l,
+      backgroundColor:yrs.map(y=>EB.dim(EB.css(c),EB.yearOn(y)&&(!f.util&&!f.grid||f[k]))),data:yrs.map(y=>BU.filter(p=>p.year===y&&p[k]).reduce((s,p)=>s+(p.value||0),0))}))},
+    options:{scales:{x:EB.axisPlain,y:EB.axisMoney},
+      onClick:(e,els)=>{ if(!els.length) return; const k=els[0].datasetIndex?"grid":"util", y=yrs[els[0].index];
+        if (f[k] && f.y0===y && f.y1===y) { f[k]=false; f.y0=2016; f.y1=2026; } else { f.util=k==="util"; f.grid=k==="grid"; f.y0=f.y1=y; } EB.apply(); },
+      plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>EB.toggleFlag(item.datasetIndex?"grid":"util")},tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.chf(c.raw)}`,footer:()=>"Klick: Merkmal + Jahr filtern"}}}}});
+
+  drawFirms(F); drawTop(F); drawMun(F); drawMap(EB.filtered());
+}
+const ROLE_TABS = [["contractor","Bauunternehmen",p=>p.con],["architect","Architektur",p=>p.arch],["eplan","Elektro-/HLKSE-Planung",p=>p.eplan],["einst","Elektroinstallation",p=>p.einst]];
+function drawFirms(F){
+  document.getElementById("firmTabs").innerHTML = ROLE_TABS.map(([k,l])=>`<button class="chip ${k===firmRole?"on":""}" data-r="${k}">${l}</button>`).join("")+(EB.filters.firm?`<button class="chip on" id="clrFirm">✕ ${EB.esc(EB.filters.firm)}</button>`:"");
+  document.querySelectorAll("#firmTabs [data-r]").forEach(b=>b.onclick=()=>{firmRole=b.dataset.r; drawFirms(F);});
+  const cf = document.getElementById("clrFirm"); if (cf) cf.onclick=()=>{ EB.filters.firm=""; EB.apply(); };
+  const get = ROLE_TABS.find(r=>r[0]===firmRole)[2];
+  const cnt = {}; F.forEach(p=>get(p).forEach(i=>{ const n=EB.firmName(i); cnt[n]=cnt[n]||{n:0,v:0}; cnt[n].n++; cnt[n].v+=p.value||0; }));
+  const rows = Object.entries(cnt).sort((a,b)=>b[1].n-a[1].n||b[1].v-a[1].v).slice(0,25);
+  const max = rows.length?rows[0][1].n:1;
+  document.getElementById("firmTbl").innerHTML = `<thead><tr><th>Firma</th><th class="num">Projekte</th><th style="width:30%"></th><th class="num">Projektvolumen</th><th></th></tr></thead><tbody>`+
+    rows.map(([n,o])=>`<tr data-f="${EB.esc(n)}" title="Klick: alle Diagramme auf diese Firma filtern" class="${EB.filters.firm===n?"sel":""}"><td>${EB.esc(n)}</td><td class="num">${o.n}</td><td><div class="bar-inline" style="width:${100*o.n/max}%"></div></td><td class="num">${EB.chf(o.v)}</td><td><a href="${EB.lnk.firm(n)}" onclick="event.stopPropagation()" title="Firmenseite">→</a></td></tr>`).join("")+"</tbody>";
+  document.querySelectorAll("#firmTbl tbody tr").forEach(tr=>tr.onclick=()=>{ EB.filters.firm = EB.filters.firm===tr.dataset.f ? "" : tr.dataset.f; EB.apply(); });
+}
+function drawTop(F){
+  const rows = F.filter(p=>p.value).sort((a,b)=>b.value-a.value).slice(0,40);
+  document.getElementById("topTbl").innerHTML = `<thead><tr><th>Projekt</th><th>Ort</th><th>Typ</th><th class="num">Jahr</th><th class="num">Zuschläge</th><th>Bauunternehmen</th><th>Versorger</th></tr></thead><tbody>`+
+    rows.map(p=>`<tr onclick="location.href='${EB.lnk.proj(p.id)}'" onmouseenter="hl('${p.id}')" onmouseleave="hl(null)"><td><b>${EB.esc(p.title)}</b><div class="small muted">${EB.esc(p.authName)}</div></td><td>${EB.esc(p.munName||"–")} ${p.canton}</td>
+      <td><span class="badge t${p.type}">${p.typeName}</span></td><td class="num">${p.year}</td><td class="num">${EB.chf(p.value)}</td>
+      <td class="small">${p.con.map(i=>EB.esc(EB.firmName(i))).join("<br>")||"–"}</td><td class="small">${EB.esc(p.dsoName||"–")}</td></tr>`).join("")+"</tbody>";
+}
+const projItem = (p) => ({lat:p.geo<=2?p.lat:null, lon:p.lon, label:p.title, sub:`${p.munName||"–"} ${p.canton} · ${p.typeName} · ${p.year}`, value:EB.chf(p.value), href:EB.lnk.proj(p.id), color:EB.css(EB.TYPE_COLOR[p.type])});
+let MUNROWS = [];
+function drawMun(F){
+  const g = {};
+  F.forEach(p=>{ if(!p.munName||p.geo>2) return; const k=p.munName+"|"+p.canton; const o=g[k]=g[k]||{name:p.munName,c:p.canton,dso:p.dsoName,n1:0,n20:0,v:0,lat:0,lon:0,k:0,ps:[]};
+    if(p.size>=1&&p.size<=4) o.n1++; if(p.size>=3&&p.size<=4) o.n20++; o.v+=p.value||0; o.ps.push(p); if(p.lat){o.lat+=p.lat;o.lon+=p.lon;o.k++;} });
+  MUNROWS = Object.values(g).filter(o=>o.n1>0).sort((a,b)=>b.n1-a.n1||b.v-a.v).slice(0,60);
+  document.getElementById("munTbl").innerHTML = `<thead><tr><th>Gemeinde</th><th>Netzbetreiber</th><th class="num">Mittel+gross</th><th class="num">Gross</th><th class="num">Summe</th></tr></thead><tbody>`+
+    MUNROWS.map((o,i)=>`<tr data-i="${i}"><td>${EB.esc(o.name)} (${o.c})</td><td class="small">${EB.esc(o.dso||"–")}</td><td class="num">${o.n1}</td><td class="num">${o.n20}</td><td class="num">${EB.chf(o.v,true)}</td></tr>`).join("")+"</tbody>";
+  document.querySelectorAll("#munTbl tbody tr").forEach(tr=>tr.onclick=()=>{ const o=MUNROWS[+tr.dataset.i];
+    EB.listMap(`Projekte in ${o.name} (${o.c})`, o.ps.filter(p=>p.size>=1&&p.size<=4).sort((a,b)=>b.value-a.value).map(projItem), {note:"mittlere und grosse Projekte"}); });
+}
+document.getElementById("mbMun").outerHTML = EB.mapBtn("mbMun");
+document.getElementById("mbTop").outerHTML = EB.mapBtn("mbTop");
+document.getElementById("mbMun").onclick = () => EB.listMap("Gemeinden mit den meisten mittleren und grossen Baustellen",
+  MUNROWS.map(o=>({lat:o.k?o.lat/o.k:null, lon:o.k?o.lon/o.k:null, label:`${o.name} (${o.c})`, sub:o.dso||"", value:`${o.n1} / ${o.n20} gross`})), {note:"Punkt = Mittel der Projektstandorte"});
+document.getElementById("mbTop").onclick = () => EB.listMap("Grösste Projekte", EB.filtered().filter(p=>p.value).sort((a,b)=>b.value-a.value).slice(0,40).map(projItem), {note:"nach aktuellem Filter"});
+let hlMarker = null;
+function hl(id){ if (hlMarker) { hlMarker.remove(); hlMarker=null; } const p = id && EB._PI[id]; if (p && p.lat) hlMarker = L.circleMarker([p.lat,p.lon],{radius:14,color:EB.css("--text"),weight:2,fill:false}).addTo(map); }
+function drawMap(F){
+  if(!map){ map = EB.baseMap("miniMap");  const PLy = EB.PointLayer(L);
+    layer = new PLy({tip:p=>`<b>${EB.esc(p.p.title)}</b><br>${EB.esc(p.p.munName)} · ${p.p.typeName}<br>${EB.chf(p.p.value)}<br><span class="muted">Klick: Details</span>`, onClick:p=>location.href=EB.lnk.proj(p.p.id)}); layer.addTo(map);
+    map.on("moveend", ()=>{ if (document.getElementById("bboxF").checked) { bbox = map.getBounds(); draw(); } });
+    document.getElementById("bboxF").onchange = (e)=>{ bbox = e.target.checked ? map.getBounds() : null; draw(); }; }
+  const col = TCOL();
+  const pts = F.filter(p=>p.lat&&p.geo<=2).sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>({lat:p.lat,lon:p.lon,color:col[p.type],r:p.value?Math.max(2,Math.min(14,Math.sqrt(p.value/1e6)*1.6)):2,p}));
+  layer.setPoints(pts);
+  document.getElementById("mapLegend").innerHTML = PR.types.map((t,i)=>`<span><span class="swatch" style="background:${col[i]}"></span>${t}</span>`).join("")+`<span class="muted">Fläche ∝ Zuschlagssumme · ${EB.n0(pts.length)} verortete Projekte · Mausrad = Zoom</span>`;
+}
+if (innerWidth < 1000) document.getElementById("row1").style.gridTemplateColumns = "1fr";
+if (innerWidth < 1000) document.getElementById("lastRow").style.gridTemplateColumns = "1fr";
+EB.filterBar(document.getElementById("filters"), draw);
+draw();
+document.addEventListener("eb-redraw", draw);
+</script>
+</body>
+</html>
