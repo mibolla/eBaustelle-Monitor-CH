@@ -68,9 +68,9 @@ function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
   const inBin = (g,i) => i===5 ? !g.fa : g.fa>=bins[i][0]&&g.fa<bins[i][1];
-  const pass = (g, skip) => g.st<3&&st.sel.includes(g.st)&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
+  const pass = (g, skip, allSt) => g.st<3&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
   const pipe = GL.filter(g=>pass(g));
-  const pipeC = GL.filter(g=>pass(g,"c")), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
+  const pipeC = GL.filter(g=>pass(g,"c",true)), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
   const tag = [st.cls!=null?"Kategorie: "+G.classes[st.cls]:"", st.sb!=null?"Grösse: "+(bins[st.sb]||[0,0,"unbekannt"])[2]:""].filter(Boolean);
   document.getElementById("cnt").innerHTML = (tag.length?`<button class="chip on" id="clrX">✕ ${tag.join(" · ")}</button> `:"")+`<b>${EB.n0(pipe.length)}</b> Gebäude in der Pipeline`;
   if (tag.length) document.getElementById("clrX").onclick=()=>{ st.cls=null; st.sb=null; draw(); };
@@ -81,10 +81,13 @@ function draw(){
     kpi("c_gwr","Im Bau",EB.n0(by[2].length),EB.n0(fa(by[2]))+" m²")+kpi("c_gwr","Wohnungen in Pipeline",EB.n0(dw(pipe)),"geplante Wohnungen (GANZWHG)")+
     kpi("c_gwr","Fertiggestellt seit 2016",EB.n0(doneN),"Gebäude (Baujahr ≥ 2016)")+kpi("c_gwr","Grosse Gebäude ≥ 5000 m²",EB.n0(pipe.filter(g=>(g.fa||0)>=5000).length),"in der Pipeline – relevante Baustellen-Lasten");
   const gc = gcol();
-  const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>b[1].reduce((x,y)=>x+y)-a[1].reduce((x,y)=>x+y));
-  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],!st.c||st.c===c[0])),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
+  const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>st.sel.reduce((x,s)=>x+b[1][s],0)-st.sel.reduce((x,s)=>x+a[1][s],0));
+  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s)&&(!st.c||st.c===c[0]))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
     options:{scales:{x:Object.assign({stacked:true},EB.axisPlain),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; st.c = st.c===c?"":c; document.getElementById("fC").value=st.c; draw(); },
-    plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); }},tooltip:{mode:"index",callbacks:{footer:()=>"Klick: Kanton filtern · Legende: Status"}}}}});
+    plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
+        labels:{generateLabels:()=>[0,1,2].map(s=>({text:G.status[s],datasetIndex:s,fillStyle:EB.dim(gc[s],st.sel.includes(s)),strokeStyle:"transparent",borderRadius:3,
+          fontColor:st.sel.includes(s)?EB.css("--text-2"):EB.css("--muted")}))}},
+      tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)}${st.sel.includes(c.datasetIndex)?"":" (abgewählt)"}`,footer:()=>"Klick: Kanton filtern · Legende: Status ein/aus"}}}}});
   const yrs = [...new Set(G.done.map(d=>d[0]))].filter(y=>y>=2016&&y<=2026).sort();
   EB.chart("cDone",{type:"bar",data:{labels:yrs,datasets:[EB.bar({label:"Geschossfläche",backgroundColor:gc[3],data:yrs.map(y=>G.done.filter(d=>d[0]===y&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[3],0))})]},
     options:{scales:{x:EB.axisPlain,y:{ticks:{callback:v=>EB.n0(v/1e6)+" Mio m²"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.n0(c.raw)+" m²",afterLabel:c=>EB.n0(G.done.filter(d=>d[0]===yrs[c.dataIndex]&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[2],0))+" Gebäude"}}}}});
