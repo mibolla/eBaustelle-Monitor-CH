@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=41809dcb"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
-<script src="assets/core.js?v=c569c3b5"></script>
+<script src="assets/core.js?v=122dba84"></script>
 </head>
 <body>
 <main class="wrap">
@@ -137,8 +137,8 @@ function fpHover(op, from){
   const ch = EB.charts.cFP;
   if (ch) {
     const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op, [o1,o2] = ORANGE();
-    ch.data.datasets[0].backgroundColor = FPTOP.map(o => o.op===op ? o1 : EB.dim(c2,on(o)));
-    ch.data.datasets[1].backgroundColor = FPTOP.map(o => o.op===op ? o2 : EB.dim(c1,on(o)));
+    ch.data.datasets[0].backgroundColor = FPTOP.map(o => o.op===op || st.d===o.op ? o1 : c2);
+    ch.data.datasets[1].backgroundColor = FPTOP.map(o => o.op===op || st.d===o.op ? o2 : c1);
     if (from === "map") { const i = FPTOP.findIndex(o=>o.op===op); if (i>=0) { ch.tooltip.setActiveElements([{datasetIndex:0,index:i},{datasetIndex:1,index:i}], {x:0,y:0}); } else ch.tooltip.setActiveElements([], {x:0,y:0}); }
     ch.update("none");
   }
@@ -162,8 +162,8 @@ function drawFlex(){
   const top = FP.slice(0,25); if (st.d && !top.find(o=>o.op===st.d) && acc[st.d]) top.push(acc[st.d]);
   const c1 = "#86b6ef", c2 = "#1c5cab", on = o => !st.d || st.d===o.op;
   EB.chart("cFP",{type:"bar",data:{labels:top.map(o=>o.op.length>40?o.op.slice(0,39)+"…":o.op),datasets:[
-      EB.bar({label:`gross (≥ ${EB.n0(big)} m²)`,data:top.map(o=>o.big),backgroundColor:top.map(o=>EB.dim(c2,on(o))),borderColor:EB.css("--surface"),borderWidth:{right:2},borderRadius:0,borderSkipped:false}),
-      EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>EB.dim(c1,on(o)))})]},
+      EB.bar({label:`gross (≥ ${EB.n0(big)} m²)`,data:top.map(o=>o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[0]:c2),borderColor:EB.css("--surface"),borderWidth:{right:2},borderRadius:0,borderSkipped:false}),
+      EB.bar({label:`mittel (${EB.n0(mn)}–${EB.n0(big)} m²)`,data:top.map(o=>o.n-o.big),backgroundColor:top.map(o=>st.d===o.op?ORANGE()[1]:c1)})]},
     options:{indexAxis:"y",scales:{x:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}},y:Object.assign({stacked:true,ticks:{autoSkip:false,font:{size:11}}},EB.axisPlain)},
       onClick:(e,els)=>{ if(els.length) selDso(top[els[0].index].op); },
       onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; fpHover(els.length ? top[els[0].index].op : null, "chart"); },
@@ -171,16 +171,16 @@ function drawFlex(){
   fpLayer.clearLayers(); FPM = {}; FPTOP = top; FPBIG = big;
   const maxN = FP.length ? FP[0].n : 1, gc = gcol();
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
-    const style = {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:st.d===o.op?EB.css("--accent"):c2,fillOpacity:st.d&&st.d!==o.op?0.15:0.55};
+    const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:c2,fillOpacity:st.d?0.3:0.55};
     const mk = L.circleMarker([o.lat/o.n,o.lon/o.n],style)
       .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
       .on("mouseover",()=>fpHover(o.op,"map")).on("mouseout",()=>fpHover(null,"map")).addTo(fpLayer);
     FPM[o.op] = {mk, style, o}; });
   const sel = st.d && acc[st.d];
   fpSites.setPoints(sel ? sel.sites.map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:g.fa>=big?6:3.5,g})) : []);
-  if (sel) fpMap.fitBounds(L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])).pad(0.1), {maxZoom:13});
+  if (sel) { fpMap.fitBounds(L.latLngBounds(sel.sites.map(g=>[g.lat,g.lon])).pad(0.1), {maxZoom:13}); FPM[st.d] && FPM[st.d].mk.bringToFront(); }
   document.getElementById("fpLeg").innerHTML = `<span><span class="swatch" style="background:${c2};border-radius:50%;opacity:.6"></span>Kreis = Schwerpunkt der Baustellen eines Netzbetreibers, Fläche ∝ Anzahl</span>`+
-    (sel ? `<span><span class="swatch" style="background:${gc[1]};border-radius:50%"></span>bewilligt</span><span><span class="swatch" style="background:${gc[2]};border-radius:50%"></span>im Bau</span><button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>` : "");
+    (sel ? `<span><span class="swatch" style="background:${ORANGE()[0]};border-radius:50%"></span>ausgewählt</span><span><span class="swatch" style="background:${gc[1]};border-radius:50%"></span>bewilligt</span><span><span class="swatch" style="background:${gc[2]};border-radius:50%"></span>im Bau</span><button class="chip on" id="fpClr">✕ ${EB.esc(st.d)}</button>` : "");
   const b = document.getElementById("fpClr"); if (b) b.onclick = () => { selDso(st.d);  };
 }
 document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");

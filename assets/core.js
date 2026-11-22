@@ -186,7 +186,7 @@
   };
   EB.yearOn = (y) => y >= EB.filters.y0 && y <= EB.filters.y1;
   /* highlight helper: selected (or all when nothing selected) keep their colour, others are dimmed */
-  EB.dim = (hex, on) => (on ? hex : hex.length === 7 ? hex + "38" : hex);
+  EB.dim = (hex, on) => (on ? hex : hex.length === 7 ? hex + "66" : hex);   // deselected = 40 % opacity, still readable
   EB.hint = '<span class="hint">Klick = filtern · Shift-Klick = mehrere</span>';
 
   EB.filterBar = function (el, onChange, opts) {
