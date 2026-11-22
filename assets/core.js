@@ -314,7 +314,7 @@
     if (!EB._armsReg) { EB._armsReg = true; C.register({ id: "ebArms", afterDraw(ch, args, o) {
       if (!o || !o.on || !window.EMBLEMS) return;
       const horiz = ch.options.indexAxis === "y", ax = horiz ? ch.scales.y : ch.scales.x; if (!ax) return;
-      const g = ch.ctx, H = 15;
+      const g = ch.ctx, H = 15, items = ax.getLabelItems ? ax.getLabelItems() : [];
       ch.data.labels.forEach((code, i) => {
         const a = EMBLEMS.arms.c[code]; if (!a) return;
         EB._armImg = EB._armImg || {};
@@ -322,8 +322,15 @@
         if (!img) { img = EB._armImg[code] = new Image(); img.onload = () => Object.values(EB.charts).forEach((x) => x.options.plugins && x.options.plugins.ebArms && x.draw()); img.src = a[0]; }
         if (!img.complete || !img.naturalWidth) return;
         const w = H * img.naturalWidth / img.naturalHeight, p = ax.getPixelForTick(i);
-        if (horiz) g.drawImage(img, ax.right - w - 4, p - H / 2, w, H);
-        else g.drawImage(img, p - w / 2, ax.top + 3, w, H);
+        // centre the arms between the axis (bar) and the drawn label, so both gaps are equal
+        const it = items[i] && items[i].options && items[i].options.translation;
+        if (horiz) { const labelRight = it ? it[0] : ax.right - 24; const cx = (labelRight + ax.right) / 2; g.drawImage(img, cx - w / 2, p - H / 2, w, H); }
+        else {
+          const fs = (ax.options.ticks.font && ax.options.ticks.font.size) || 12;
+          const labelTop = it ? (items[i].options.textBaseline === "middle" ? it[1] - fs / 2 : it[1]) : ax.top + 21;
+          const cy = (ax.top + labelTop) / 2 + 1.5;   // +1.5: optical correction for the glyph top (measured: equal 6–7 px gaps)
+          g.drawImage(img, p - w / 2, cy - H / 2, w, H);
+        }
       });
     } }); }
     if (!EB._emptyReg) { EB._emptyReg = true; C.register({ id: "ebEmpty", afterDraw(ch) {
@@ -374,7 +381,8 @@
     if (cfg.options && cfg.options.plugins && cfg.options.plugins.ebArms && cfg.options.plugins.ebArms.on) {
       const axn = cfg.options.indexAxis === "y" ? "y" : "x";
       cfg.options.scales = cfg.options.scales || {}; cfg.options.scales[axn] = Object.assign({}, cfg.options.scales[axn]);
-      cfg.options.scales[axn].ticks = Object.assign({}, cfg.options.scales[axn].ticks, { padding: axn === "x" ? 21 : 24 });
+      cfg.options.scales[axn].ticks = Object.assign({}, cfg.options.scales[axn].ticks, { padding: axn === "x" ? 23 : 26 });
+      cfg.options.scales[axn].grid = Object.assign({}, cfg.options.scales[axn].grid, { drawTicks: false });
     }
     // horizontal bars: resolve hover/click along the category axis (y), so highlight, tooltip and click hit the same row
     if (cfg.options && cfg.options.indexAxis === "y") {
