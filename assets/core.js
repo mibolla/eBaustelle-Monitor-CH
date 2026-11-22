@@ -298,7 +298,8 @@
     C.defaults.plugins.tooltip.external = EB.chartTip;
     // empty state: a chart without data says so instead of showing blank axes
     // selected row band (horizontal bar charts): options.plugins.ebRow = { index, color }
-    if (!EB._rowReg) { EB._rowReg = true; C.register({ id: "ebRow", beforeDatasetsDraw(ch, args, o) {
+    if (!EB._rowReg) { EB._rowReg = true; C.register({ id: "ebRow", beforeDatasetsDraw(ch, args, oo) {
+      const o = ch.$ebRow;   // band state lives on the chart (not in cached plugin options)
       const g = ch.ctx, n = ch.data.labels.length; if (!n || !o) return;
       const band = (idx, col) => {
         if (idx == null || idx < 0) return;
@@ -409,11 +410,14 @@
       prev.setActiveElements([]);
       prev.tooltip && prev.tooltip.setActiveElements([], { x: 0, y: 0 });
       const t = document.getElementById("ctip"); if (t) t.style.opacity = 0;
+      prev.$ebRow = cfg.options && cfg.options.plugins && cfg.options.plugins.ebRow ? Object.assign({}, cfg.options.plugins.ebRow) : null;
       prev.update(cfg.options && cfg.options.animation === false ? "none" : undefined);
       return prev;
     }
     if (prev) prev.destroy();
     EB.charts[id] = new Chart(el, cfg);
+    EB.charts[id].$ebRow = cfg.options && cfg.options.plugins && cfg.options.plugins.ebRow ? Object.assign({}, cfg.options.plugins.ebRow) : null;
+    EB.charts[id].draw();
     return EB.charts[id];
   };
   EB.bar = (o) => Object.assign({ borderRadius: 4, borderSkipped: "start", maxBarThickness: 28, borderWidth: 0, categoryPercentage: 0.8, barPercentage: 0.9 }, o);
