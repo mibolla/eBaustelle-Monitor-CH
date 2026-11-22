@@ -5,7 +5,7 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=2d5006db">
+<link rel="stylesheet" href="assets/style.css?v=015b6c09">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
@@ -170,6 +170,8 @@ const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
+// short operator name for map hovers: drop the service suffix after a comma and long brackets
+const shortOp = (s) => { let t = s.split(",")[0].replace(/\s*\((?:[^)]{9,})\)/, "").trim(); return t.length > 34 ? t.slice(0, 33) + "…" : t; };
 let FPSEL = null, FPFOCUS = null;
 /* flex-pool layout: map with the same size as the canton map above; operator list ends exactly at the map bottom */
 function fpAlign(){
@@ -319,7 +321,7 @@ function drawFlex(){
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
     const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:EB.css("--muted"),fillOpacity:st.d?0.25:0.45};
     const mk = L.circleMarker([o.lat/o.n,o.lon/o.n],style)
-      .bindTooltip(`<b>${EB.logo(o.op, 18)}${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
+      .bindTooltip(`<div class="btip"><b>${EB.logo(o.op, 14)}${EB.esc(shortOp(o.op))}</b><span>${EB.n0(o.n)} Baust.${o.big ? " · " + o.big + " gross" : ""}</span></div>`, {className:"btip-w", direction:"top", offset:[0,-6]}).on("click",()=>selDso(o.op))
       .on("mouseover",()=>fpHover(o.op,"map")).on("mouseout",()=>fpHover(null,"map")).addTo(fpLayer);
     FPM[o.op] = {mk, style, o}; });
   FPSEL = st.d && acc[st.d];
