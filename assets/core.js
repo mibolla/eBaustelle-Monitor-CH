@@ -301,7 +301,7 @@
     // empty state: a chart without data says so instead of showing blank axes
     // selected row band (horizontal bar charts): options.plugins.ebRow = { index, color }
     if (!EB._rowReg) { EB._rowReg = true; C.register({ id: "ebRow", beforeDatasetsDraw(ch, args, oo) {
-      const o = ch.$ebRow;   // band state lives on the chart (not in cached plugin options)
+      const o = ch.$ebRow && ch.$ebRow.live ? ch.$ebRow.live() : ch.$ebRow;   // live state (read at draw time) or stored state
       const g = ch.ctx, n = ch.data.labels.length; if (!n || !o) return;
       const band = (idx, col) => {
         if (idx == null || idx < 0) return;
@@ -405,18 +405,9 @@
       };
       if (!cfg.options.onHover) cfg.options.onHover = (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; };
     }
-    // update an existing chart in place instead of destroying it: no blank canvas, no stale hover state
-    if (prev && prev.canvas === el && prev.config.type === cfg.type) {
-      prev.config.data = cfg.data;
-      prev.config.options = cfg.options;
-      prev.setActiveElements([]);
-      prev.tooltip && prev.tooltip.setActiveElements([], { x: 0, y: 0 });
-      const t = document.getElementById("ctip"); if (t) t.style.opacity = 0;
-      prev.$ebRow = cfg.options && cfg.options.plugins && cfg.options.plugins.ebRow ? Object.assign({}, cfg.options.plugins.ebRow) : null;
-      prev.stop();                 // cancel any running animation, then apply the new state at once (no half-drawn bars)
-      prev.update("none");
-      return prev;
-    }
+    // rebuild cleanly (clicks are deferred until Chart.js has finished its own event handling, so this is safe);
+    // hover-only changes recolour the existing chart elsewhere and never come through here
+    const t0 = document.getElementById("ctip"); if (t0) t0.style.opacity = 0;
     if (prev) prev.destroy();
     EB.charts[id] = new Chart(el, cfg);
     EB.charts[id].$ebRow = cfg.options && cfg.options.plugins && cfg.options.plugins.ebRow ? Object.assign({}, cfg.options.plugins.ebRow) : null;
