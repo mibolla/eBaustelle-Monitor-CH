@@ -317,7 +317,7 @@ function drawFlex(){
   FP.forEach(o=>{ const r = 4 + 26*Math.sqrt(o.n/maxN);
     const style = st.d===o.op ? {radius:r,weight:2.5,color:EB.css("--surface"),fillColor:ORANGE()[0],fillOpacity:0.75} : {radius:r,weight:1.5,color:EB.css("--surface"),fillColor:EB.css("--muted"),fillOpacity:st.d?0.25:0.45};
     const mk = L.circleMarker([o.lat/o.n,o.lon/o.n],style)
-      .bindTooltip(`<b>${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
+      .bindTooltip(`<b>${EB.logo(o.op, 18)}${EB.esc(o.op)}</b><br>${EB.n0(o.n)} Baustellen · ${EB.n0(o.big)} gross<br><span class="muted">Klick: filtern</span>`).on("click",()=>selDso(o.op))
       .on("mouseover",()=>fpHover(o.op,"map")).on("mouseout",()=>fpHover(null,"map")).addTo(fpLayer);
     FPM[o.op] = {mk, style, o}; });
   FPSEL = st.d && acc[st.d];
