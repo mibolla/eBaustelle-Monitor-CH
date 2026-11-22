@@ -254,12 +254,13 @@ footer{max-width:1480px;margin:0 auto;padding:20px;color:var(--muted);font-size:
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--gwr-proj:#1c5cab;--gwr-bew:#5598e7;--gwr-bau:#cde2fb}}
 /* municipality list window */
 .lg-link{border:0;background:none;font:inherit;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px}
-.munwin{width:min(400px,calc(100vw - 16px))}
+.munwin{width:min(330px,calc(100vw - 16px))}
 .mw-list{max-height:330px;overflow:auto;margin:8px -4px 0;border-top:1px solid var(--border)}
 .mw-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:6px 6px;border-bottom:1px solid var(--grid);cursor:pointer;font-size:12.5px;border-radius:6px}
 .mw-row:hover{background:var(--surface-2)}
 .mw-row .n{font-variant-numeric:tabular-nums;text-align:right;color:var(--text-2)}
-.mw-row .s{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted);min-width:58px}
+.mw-row .s{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted);min-width:38px}
+.mw-row .s.has{color:var(--accent);text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
 .mw-head{display:grid;grid-template-columns:1fr auto auto;gap:10px;font-size:11px;color:var(--muted);padding:6px 6px 2px;text-transform:uppercase;letter-spacing:.04em}
 .mw-ask{background:var(--surface-2);border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12.5px}
 /* arms, logos, suggestion box */
@@ -273,3 +274,10 @@ img.emb.logo{border-radius:4px;background:#fff}
 .ac-ic{display:flex;align-items:center;justify-content:center}.ac-ic img.emb{margin:0}
 .ac-r{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mw-row .nm{display:flex;align-items:center;gap:0}
+/* site list in hover */
+#tt .st-row{display:grid;grid-template-columns:8px 1fr auto;gap:6px;align-items:center;font-size:12px;line-height:1.5}
+#tt .st-a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px;color:var(--text-2)}
+#tt .ct-dot{width:8px;height:8px;border-radius:50%}
+#tt .ct-title{font-weight:600;margin-bottom:4px}
+#tt .ct-hint{margin-top:4px;color:var(--muted);font-size:11px}
+.mw-row,.mw-head{gap:8px}

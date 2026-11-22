@@ -5,7 +5,7 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=df32ea69">
+<link rel="stylesheet" href="assets/style.css?v=2d5006db">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
@@ -194,13 +194,28 @@ function fpMapRender(fit){
 function openMunList(anchor){
   const op = st.d, sel = FPSEL; if (!op) return;
   const rows = Object.keys(MUN).filter(b => (MUN[b][2]||"").split(" | ").includes(op)).map(b => {
-    const m = MUN[b]; const n = (sel && sel.sitesAll || []).filter(g => g.bfs === +b).length;
-    return {bfs:+b, name:m[0], canton:m[1], pop:m[4]||0, sites:n, shared:(m[2]||"").includes(" | ")};
+    const m = MUN[b]; const ss = (sel && sel.sitesAll || []).filter(g => g.bfs === +b).sort((x,y) => (y.fa||0) - (x.fa||0));
+    return {bfs:+b, name:m[0], canton:m[1], pop:m[4]||0, sites:ss.length, list:ss, shared:(m[2]||"").includes(" | ")};
   }).sort((a,b) => b.sites - a.sites || b.pop - a.pop);
-  const list = rows.map((r,i) => `<div class="mw-row" data-i="${i}"><span class="nm">${EB.arm("m", r.bfs, 18)}${EB.esc(r.name)}&nbsp;<span class="muted">${r.canton}</span>${r.shared ? ' <span class="badge" title="mehrere Netzbetreiber in dieser Gemeinde">geteilt</span>' : ""}</span><span class="n">${r.pop ? EB.n0(r.pop) : "–"}</span><span class="s">${r.sites ? EB.n0(r.sites) + " Baust." : "–"}</span></div>`).join("");
+  const list = rows.map((r,i) => `<div class="mw-row" data-i="${i}"><span class="nm">${EB.arm("m", r.bfs, 18)}${EB.esc(r.name)}&nbsp;<span class="muted">${r.canton}</span>${r.shared ? ' <span class="badge" title="mehrere Netzbetreiber in dieser Gemeinde">geteilt</span>' : ""}</span><span class="n">${r.pop ? EB.n0(r.pop) : "–"}</span><span class="s${r.sites ? " has" : ""}" data-s="${i}">${r.sites ? EB.n0(r.sites) : "–"}</span></div>`).join("");
   const head = `<div class="pc-top"><span class="pc-status" style="--c:${ORANGE()[0]}">Netzgebiet</span><span class="pc-id">${rows.length} Gemeinden</span></div>
-    <div class="pc-title">${EB.logo(op, 20)}${EB.esc(op)}</div><div class="pc-sub">Sortiert nach Anzahl Baustellen · Einwohner 2025 (BFS STATPOP)</div>`;
-  const win = EB.showPop(anchor, `${head}<div id="mwAsk"></div><div class="mw-head"><span>Gemeinde</span><span>Einwohner</span><span>Baustellen</span></div><div class="mw-list">${list}</div>`, "munwin");
+    <div class="pc-title">${EB.logo(op, 20)}${EB.esc(op)}</div><div class="pc-sub">nach Anzahl Baustellen · Einwohner 2025 (BFS)</div>`;
+  const win = EB.showPop(anchor, `${head}<div id="mwAsk"></div><div class="mw-head"><span>Gemeinde</span><span>Einw.</span><span>Baust.</span></div><div class="mw-list">${list}</div>`, "munwin");
+  // hover on the site count: list of the sites (address, status, floor area)
+  const tt = document.getElementById("tt"), stc = gcol();
+  win.querySelectorAll(".mw-row .s.has").forEach(cell => {
+    cell.onmouseenter = (e) => {
+      const x = rows[+cell.dataset.s], top = x.list.slice(0, 15);
+      tt.innerHTML = `<div class="ct-title">${EB.arm("m", x.bfs, 14)}${EB.esc(x.name)} · ${x.sites} Baustellen</div>` +
+        top.map(s => `<div class="st-row"><span class="ct-dot" style="background:${stc[s.st]}"></span><span class="st-a">${EB.esc(s.addr || G.classes[s.cls] || "ohne Adresse")}</span><span class="ct-val">${s.fa ? EB.n0(s.fa) + " m²" : ""}</span></div>`).join("") +
+        (x.sites > 15 ? `<div class="ct-hint">+ ${x.sites - 15} weitere · Klick auf Zeile: Karte fokussieren</div>` : `<div class="ct-hint">Klick auf Zeile: Karte fokussieren</div>`);
+      const r = cell.getBoundingClientRect(); tt.style.display = "block";
+      const w = tt.offsetWidth, h = tt.offsetHeight;
+      tt.style.left = Math.max(8, Math.min(r.right + 10, innerWidth - w - 8)) + "px";
+      tt.style.top = Math.max(8, Math.min(r.top - 10, innerHeight - h - 8)) + "px";
+    };
+    cell.onmouseleave = () => { tt.style.display = "none"; };
+  });
   win.querySelectorAll(".mw-row").forEach(r => r.onclick = () => {
     const x = rows[+r.dataset.i], ask = win.querySelector("#mwAsk");
     win.querySelectorAll(".mw-row").forEach(q => q.style.background = ""); r.style.background = "var(--accent-soft)";
