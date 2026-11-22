@@ -11,7 +11,7 @@
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=5ff0e4fe"></script>
-<script src="assets/core.js?v=79ba7873"></script>
+<script src="assets/core.js?v=f0c9d602"></script>
 </head>
 <body>
 <main class="wrap">
@@ -26,9 +26,12 @@
     <span class="fcount" id="cnt"></span>
   </div>
   <section class="grid g-kpi" id="kpis"></section>
-  <section class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-top:14px" id="row1">
-    <div class="card"><div class="hd"><h2>Pipeline nach Kanton</h2><span id="i1"></span><span class="hint">Klick filtert · Anzahl Gebäude</span></div><div class="chartbox" style="height:440px"><canvas id="cCan"></canvas></div></div>
-    <div class="card"><div class="hd"><h2>Karte</h2><span id="i2"></span></div><div id="map" class="map"></div><div class="legend" id="leg" style="margin-top:8px"></div></div>
+  <section class="card" style="margin-top:14px">
+    <div class="hd"><h2>Pipeline nach Kanton</h2><span id="i1"></span><span class="hint">Überfahren = Kanton auf der Karte · Klick = Kanton wählen und hinzoomen</span></div>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)" id="row1">
+      <div class="chartbox" style="height:470px"><canvas id="cCan"></canvas></div>
+      <div><div id="map" class="map"></div><div class="legend" id="leg" style="margin-top:8px"></div></div>
+    </div>
   </section>
   <section class="card" style="margin-top:14px">
     <div class="hd" style="flex-wrap:wrap;gap:10px"><h2>Flex-Pool: aktive Baustellen je Netzbetreiber</h2><span id="iF"></span>
@@ -55,10 +58,26 @@
 </main>
 <script>
 EB.shell("gwr.html"); EB.chartDefaults();
-["i1","i2","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
+["i1","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
 const G = window.GWR, GC = G.cols, MUN = window.MUN;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
 const st = { sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
+/* canton hover / selection on the main map: orange boundary like the grid-operator areas */
+let CANS = [], canHot = null;
+const canSel = L.layerGroup(), canHov = L.layerGroup();
+function canHover(k){
+  if (k === canHot) return; canHot = k;
+  const ch = EB.charts.cCan;
+  if (ch) { ch.options.plugins.ebRow.hover = k ? CANS.findIndex(c=>c[0]===k) : -1; if (!k) ch.setActiveElements([]); ch.update("none"); }
+  if (!k || k === st.c) { canHov.clearLayers(); return; }
+  EB.drawArea(map, canHov, EB.cantonArea(k), st.c ? {noFill:true, dash:"5 4", weight:2} : {fill:0.13, weight:2.5});
+}
+function drawCantonSel(fit){
+  canHov.clearLayers();
+  const a = st.c ? EB.drawArea(map, canSel, EB.cantonArea(st.c), {fill:0.1, weight:2.5}) : (canSel.clearLayers(), null);
+  if (fit && a) map.fitBounds(L.latLngBounds(a.lines.flat()).pad(0.06), {maxZoom:12});
+}
+document.getElementById("cCan").addEventListener("mouseleave", ()=>canHover(null));
 // canton and grid operator are linked: if a choice leaves no buildings, drop the other filter and say so
 const anyPipe = (c, d) => GL.some(g=>g.st<3&&(!c||g.canton===c)&&(!d||g.dso.includes(d)));
 const GMUNS = [...new Set(GL.filter(g=>g.st<3).map(g=>g.munName+"|"+g.canton))].sort((a,b)=>a.localeCompare(b,"de"));
@@ -73,7 +92,10 @@ document.getElementById("fM").onchange=e=>{ const m=e.target.value.trim().match(
 document.getElementById("fMx").onclick=()=>setMun("");
 function setCanton(c){ if (c && st.m && !st.m.endsWith("|"+c)) { EB.toast(`Gemeinde-Filter ${st.m.split("|")[0]} entfernt – liegt nicht in ${c}`); st.m=""; document.getElementById("fMx").style.display="none"; const i=document.getElementById("fM"); i.style.display=""; i.value=""; }
   if (c && st.d && !anyPipe(c, st.d)) { EB.toast(`Versorger-Filter «${st.d}» entfernt – keine Baustellen dieses Netzbetreibers in ${c}`); st.d=""; document.getElementById("fD").value=""; }
-  st.c=c; document.getElementById("fC").value=c; munOpts(); draw(); }
+  const had = st.c;
+  st.c=c; document.getElementById("fC").value=c; munOpts(); draw();
+  drawCantonSel(!!c);
+  if (had && !c && !st.d) { map._ebHome(); fpMap._ebHome(); } }
 function setDso(d){ const had = st.d; if (d && st.c && !anyPipe(st.c, d)) { EB.toast(`Kantons-Filter ${st.c} entfernt – «${d}» hat dort keine Baustellen`); st.c=""; document.getElementById("fC").value=""; }
   st.d=d; document.getElementById("fD").value=d; draw();
   // deselecting an operator returns both maps to the initial Switzerland view
@@ -87,7 +109,7 @@ document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
 document.getElementById("fZ").onchange=e=>{st.z=+e.target.value; draw();};
 document.getElementById("fD").onchange=e=>{setDso(e.target.value.trim());};
 const map = EB.baseMap("map"); const PL = EB.PointLayer(L);
-const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map); const mainArea = L.layerGroup().addTo(map);
+const layer = new PL({zoomScale:true, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.esc(G.classes[p.g.cls])}${p.g.fa?" · "+EB.n0(p.g.fa)+" m²":""}`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); layer.addTo(map); EB.gwrWms().addTo(map); const mainArea = L.layerGroup().addTo(map); canSel.addTo(map); canHov.addTo(map);
 function kpi(id,l,v,n){ return `<div class="card kpi"><div class="lab">${l}${EB.info(id)}</div><div class="val">${v}</div><div class="note">${n||""}</div></div>`; }
 function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
@@ -106,12 +128,14 @@ function draw(){
     kpi("c_gwr","Fertiggestellt seit 2016",EB.n0(doneN),"Gebäude (Baujahr ≥ 2016)")+kpi("c_gwr","Grosse Gebäude ≥ 5000 m²",EB.n0(pipe.filter(g=>(g.fa||0)>=5000).length),"in der Pipeline – relevante Baustellen-Lasten");
   const gc = gcol();
   const cans = EB.CANTONS.map(c=>[c,[0,1,2].map(s=>pipeC.filter(g=>g.canton===c&&g.st===s).length)]).sort((a,b)=>st.sel.reduce((x,s)=>x+b[1][s],0)-st.sel.reduce((x,s)=>x+a[1][s],0));
-  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s)&&(!st.c||st.c===c[0]))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
+  EB.chart("cCan",{type:"bar",data:{labels:cans.map(c=>c[0]),datasets:[0,1,2].map(s=>EB.bar({label:G.status[s],backgroundColor:cans.map(c=>EB.dim(gc[s],st.sel.includes(s))),data:cans.map(c=>c[1][s]),borderColor:EB.css("--surface"),borderWidth:{top:2},borderRadius:0}))},
     options:{scales:{x:Object.assign({stacked:true},EB.axisPlain,{ticks:{autoSkip:false,maxRotation:0,minRotation:0,font:{size:10.5}}}),y:{stacked:true,grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const c=cans[els[0].index][0]; setCanton(st.c===c?"":c); },
-    plugins:{legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? "pointer" : "default"; canHover(els.length ? cans[els[0].index][0] : null); },
+    plugins:{ebRow:{index:cans.findIndex(c=>c[0]===st.c),hover:-1},legend:{position:"top",align:"start",onClick:(e,item)=>{ const i=item.datasetIndex; st.sel = st.sel.includes(i)&&st.sel.length>1 ? st.sel.filter(x=>x!==i) : st.sel.includes(i) ? [0,1,2] : [...st.sel,i]; chips(); draw(); },
         labels:{generateLabels:()=>[0,1,2].map(s=>({text:G.status[s],datasetIndex:s,fillStyle:EB.dim(gc[s],st.sel.includes(s)),strokeStyle:"transparent",borderRadius:3,
           fontColor:st.sel.includes(s)?EB.css("--text-2"):EB.css("--muted")}))}},
-      tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)}${st.sel.includes(c.datasetIndex)?"":" (abgewählt)"}`,footer:()=>"Klick: Kanton filtern · Legende: Status ein/aus"}}}}});
+      tooltip:{mode:"index",callbacks:{label:c=>` ${c.dataset.label}: ${EB.n0(c.raw)}${st.sel.includes(c.datasetIndex)?"":" (abgewählt)"}`,footer:()=>"Klick: Kanton wählen und hinzoomen"}}}}});
+  CANS = cans; canHot = null;
   const yrs = [...new Set(G.done.map(d=>d[0]))].filter(y=>y>=2016&&y<=2026).sort();
   EB.chart("cDone",{type:"bar",data:{labels:yrs,datasets:[EB.bar({label:"Geschossfläche",backgroundColor:gc[3],data:yrs.map(y=>G.done.filter(d=>d[0]===y&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[3],0))})]},
     options:{scales:{x:EB.axisPlain,y:{ticks:{callback:v=>EB.n0(v/1e6)+" Mio m²"},grid:{color:()=>EB.css("--grid")},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+EB.n0(c.raw)+" m²",afterLabel:c=>EB.n0(G.done.filter(d=>d[0]===yrs[c.dataIndex]&&(!st.c||d[1]===st.c)).reduce((s,d)=>s+d[2],0))+" Gebäude"}}}}});

@@ -299,11 +299,16 @@
     // empty state: a chart without data says so instead of showing blank axes
     // selected row band (horizontal bar charts): options.plugins.ebRow = { index, color }
     if (!EB._rowReg) { EB._rowReg = true; C.register({ id: "ebRow", beforeDatasetsDraw(ch, args, o) {
-      if (!o || o.index == null || o.index < 0) return;
-      const y = ch.scales.y, n = ch.data.labels.length; if (!y || !n) return;
-      const h = (y.bottom - y.top) / n, cy = y.getPixelForValue(o.index);
-      const g = ch.ctx; g.save(); g.fillStyle = o.color || "rgba(235,104,52,.13)";
-      g.beginPath(); (g.roundRect ? g.roundRect(4, cy - h / 2, ch.width - 8, h, 5) : g.rect(4, cy - h / 2, ch.width - 8, h)); g.fill(); g.restore();
+      const g = ch.ctx, n = ch.data.labels.length; if (!n || !o) return;
+      const band = (idx, col) => {
+        if (idx == null || idx < 0) return;
+        g.save(); g.fillStyle = col; g.beginPath();
+        if (ch.options.indexAxis === "y") { const y = ch.scales.y, h = (y.bottom - y.top) / n, cy = y.getPixelForValue(idx); (g.roundRect ? g.roundRect(4, cy - h / 2, ch.width - 8, h, 5) : g.rect(4, cy - h / 2, ch.width - 8, h)); }
+        else { const x = ch.scales.x, w = (x.right - x.left) / n, cx = x.getPixelForValue(idx), a = ch.chartArea; (g.roundRect ? g.roundRect(cx - w / 2, a.top - 4, w, ch.height - a.top, 5) : g.rect(cx - w / 2, a.top - 4, w, ch.height - a.top)); }
+        g.fill(); g.restore();
+      };
+      band(o.index, o.color || "rgba(235,104,52,.14)");          // selected: stays
+      if (o.hover !== o.index) band(o.hover, o.hoverColor || "rgba(235,104,52,.08)");   // hovered: lighter
     } }); }
     if (!EB._emptyReg) { EB._emptyReg = true; C.register({ id: "ebEmpty", afterDraw(ch) {
       const any = ch.data.datasets.some((d) => !d.hidden && (d.data || []).some((v) => (typeof v === "object" && v ? v.y || v.x : v)));
@@ -455,7 +460,7 @@
     const map = L.map(id, opts);
     // fit Switzerland tightly into the frame (fractional zoom), also when the frame is resized
     map.fitBounds(EB.CH_BOUNDS, { padding: [6, 6] });
-    map._ebHome = () => map.flyToBounds(EB.CH_BOUNDS, { padding: [6, 6], duration: 0.6 });
+    map._ebHome = () => { map.stop(); map.fitBounds(EB.CH_BOUNDS, { padding: [6, 6], animate: true }); };
     map.createPane("basemap"); map.getPane("basemap").style.zIndex = 150;
     const rnd = L.canvas({ pane: "basemap", padding: 0.3 });
     const B = window.BASEMAP;
@@ -805,12 +810,17 @@
   EB.opArea = function (op) {
     const T = window.MUNIGEO, M = window.MUN;
     if (!T || !M || !op) return null;
-    if (!EB._arcs) {
+    if (!EB._arcs || op === "__init__") {
       const [sx, sy] = T.transform.scale, [tx, ty] = T.transform.translate;
       EB._arcs = T.arcs.map((a) => { let x = 0, y = 0; return a.map(([dx, dy]) => { x += dx; y += dy; return [y * sy + ty, x * sx + tx]; }); });
     }
+    return EB.areaOfBfs(Object.keys(M).filter((b) => (M[b][2] || "").split(" | ").includes(op)));
+  };
+  EB.cantonArea = (k) => { if (!window.MUN) return null; EB.opArea("__init__"); return EB.areaOfBfs(Object.keys(MUN).filter((b) => MUN[b][1] === k)); };
+  EB.areaOfBfs = function (bfs) {
+    const T = window.MUNIGEO, M = window.MUN; if (!T || !M) return null;
+    if (!EB._arcs) EB.opArea("__init__");
     const A = EB._arcs, cnt = new Map(), polys = [];
-    const bfs = Object.keys(M).filter((b) => (M[b][2] || "").split(" | ").includes(op));
     let shared = 0, missing = 0;
     bfs.forEach((b) => {
       const rings = T.munis[b]; if (!rings) { missing++; return; }
@@ -820,9 +830,10 @@
     const lines = [...cnt].filter(([, n]) => n === 1).map(([k]) => A[k]);
     return { n: bfs.length, polys, lines, shared, missing };
   };
-  EB.drawOpArea = function (map, group, op, o) {
+  EB.drawOpArea = function (map, group, op, o) { return EB.drawArea(map, group, op ? EB.opArea(op) : null, o); };
+  EB.drawArea = function (map, group, a, o) {
     group.clearLayers();
-    const a = EB.opArea(op); if (!a || !a.polys.length) return null;
+    if (!a || !a.polys.length) return null;
     if (!map.getPane("opArea")) { map.createPane("opArea"); map.getPane("opArea").style.zIndex = 390; }
     const col = (o && o.color) || EB.css("--s2");
     const rnd = L.svg({ pane: "opArea" });
