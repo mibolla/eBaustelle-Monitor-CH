@@ -473,20 +473,20 @@
       <div class="pc-title">${EB.esc(g.addr || "Adresse nicht erfasst")}</div>
       <div class="pc-sub">${EB.esc(g.munName || "")} ${EB.esc(g.canton || "")}</div>
       <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
-        ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", EB.esc(g.dso || ""))}</dl>
+        ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", g.dso ? EB.entList("dso", g.dso, "<br>") : "")}</dl>
       <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Karte", EB.lnk.gwrObj(g.egid))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
       <div class="pc-src">Quelle: BFS, Gebäude- und Wohnungsregister</div></div>`;
   };
   EB.projCard = function (p) {
     const P = window.PROJ, col = EB.css(EB.TYPE_COLOR[p.type]);
-    const firms = (p.con || []).slice(0, 3).map((i) => EB.esc(EB.firmName(i))).join(", ");
-    const arch = (p.arch || []).slice(0, 2).map((i) => EB.esc(EB.firmName(i))).join(", ");
+    const firms = (p.con || []).slice(0, 3).map((i) => EB.ent("firm", EB.firmName(i))).join(", ");
+    const arch = (p.arch || []).slice(0, 2).map((i) => EB.ent("firm", EB.firmName(i))).join(", ");
     return `<div class="pcard">
       <div class="pc-top"><span class="pc-status" style="--c:${col}">${EB.esc(p.typeName)}</span><span class="pc-id">${EB.esc(p.sizeName)} · ${p.y0 === p.y1 ? p.year : p.y0 + "–" + p.y1}</span></div>
       <div class="pc-title">${EB.esc(p.title)}</div>
-      <div class="pc-sub">${EB.esc(p.authName)}</div>
-      <dl class="pc-kv">${row("Ort", EB.esc((p.munName || "–") + " " + (p.canton || "")))}${row("Zuschläge", p.value ? EB.chf(p.value) : "")}${row("Vergabeart", EB.PROC_LABEL[P.procs[p.proc]] || "")}
-        ${row("Bauunternehmen", firms)}${row("Architektur", arch)}${row("Netzbetreiber", EB.esc(p.dsoName || ""))}${row("CO₂ (Schätzung)", p.co2 ? EB.n0(p.co2) + " t" : "")}</dl>
+      <div class="pc-sub">${EB.ent("auth", p.authName)}</div>
+      <dl class="pc-kv">${row("Ort", p.munName ? EB.ent("mun", p.munName, p.munName + " " + (p.canton || ""), p.canton) : "")}${row("Zuschläge", p.value ? EB.chf(p.value) : "")}${row("Vergabeart", EB.PROC_LABEL[P.procs[p.proc]] || "")}
+        ${row("Bauunternehmen", firms)}${row("Architektur", arch)}${row("Netzbetreiber", p.dsoName ? EB.entList("dso", p.dsoName, "<br>") : "")}${row("CO₂ (Schätzung)", p.co2 ? EB.n0(p.co2) + " t" : "")}</dl>
       <div class="pc-btns">${EB.btn("Projektdetails", EB.lnk.proj(p.id), "primary")}${EB.btn("Zoomen", "", "zoom")}${EB.btn("GWR-Karte am Ort", EB.lnk.gwrMap(p.lat, p.lon))}</div>
       <div class="pc-src">Quelle: simap.ch · ${p.nn} Publikationen</div></div>`;
   };
@@ -529,4 +529,92 @@
     place();
   };
   EB.closeCard = () => { if (EB._card) { const c = EB._card; EB._card = null; c.close(); } };
+
+  /* ---------------- entity popover: click a firm / municipality / grid operator / authority / role
+     → small window with key facts and explicit actions (nothing navigates until a link is clicked) */
+  EB.ent = (type, value, label, extra) =>
+    `<span class="ent" role="button" tabindex="0" data-ent="${type}" data-v="${EB.esc(value)}"${extra ? ` data-x="${EB.esc(extra)}"` : ""}>${EB.esc(label == null ? value : label)}</span>`;
+  EB.entList = (type, str, sep) => (str || "").split(sep || " | ").filter(Boolean).map((v) => EB.ent(type, v)).join(sep === undefined ? " · " : sep);
+  const ROLE_NAME = (r) => (window.PROJ && PROJ.role_label[r]) || ({ contractor: "Bauunternehmen", planner: "Planer (übrige)" })[r] || r;
+  const goFilter = (patch, page) => {
+    const f = EB.filters;
+    Object.keys(EB.DEF).forEach((k) => { if (k !== "nofw") f[k] = JSON.parse(JSON.stringify(EB.DEF[k])); });
+    Object.assign(f, patch); EB.saveFilters();
+    const here = location.pathname.split("/").pop() || "index.html";
+    if (EB._onFilter && (here === page || (!page && EB._fbRender))) { EB.apply(); EB.closePop(); }
+    else location.href = page || "index.html";
+  };
+  EB._entActions = {};
+  const act = (label, fn, kind) => { const id = "a" + Math.random().toString(36).slice(2, 8); EB._entActions[id] = fn; return `<a href="#" class="pbtn${kind === "primary" ? " primary" : ""}" data-act="${id}">${label}</a>`; };
+  const stat = (k, v) => (v ? `<dt>${k}</dt><dd>${v}</dd>` : "");
+  EB.entCard = function (type, v, x) {
+    const P = EB._P ? EB._P : (window.PROJ ? EB.projects() : []);
+    if (type === "firm") {
+      EB.firms(); const f = EB._FN && EB._FN[v];
+      const roles = f ? Object.entries(f.roles).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([r, n]) => `${ROLE_NAME(r)} (${n})`).join(", ") : "";
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--accent)">Firma</span>${f && f.arge ? '<span class="pc-id">Arbeitsgemeinschaft</span>' : ""}</div>
+        <div class="pc-title">${EB.esc(v)}</div>${f ? `<div class="pc-sub">${EB.esc(f.plz)} ${EB.esc(f.city)}</div>` : ""}
+        ${f ? `<dl class="pc-kv">${stat("Zuschläge", EB.n0(f.n))}${stat("Summe", EB.chf(f.value))}${stat("Projekte", EB.n0(f.np))}${stat("Rollen", roles)}${stat("Kantone", Object.keys(f.cantons).filter(Boolean).slice(0, 6).join(", "))}</dl>` : '<div class="pc-sub" style="margin:8px 0">Keine weiteren Angaben im Datensatz.</div>'}
+        <div class="pc-btns">${EB.btn("Firmendetails", EB.lnk.firm(v), "primary")}${f ? act("Als Filter setzen", () => goFilter({ firm: v })) : ""}${EB.btn("Zefix", EB.lnk.zefix(v))}${EB.btn("Referenzen", EB.lnk.web(v))}</div>`;
+    }
+    if (type === "mun") {
+      const ps = P.filter((p) => p.munName === v && (!x || p.canton === x));
+      const val = ps.reduce((s, p) => s + (p.value || 0), 0);
+      const geo = ps.find((p) => p.lat && p.geo <= 2);
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s3)">Gemeinde</span></div><div class="pc-title">${EB.esc(v)} ${EB.esc(x || "")}</div>
+        <dl class="pc-kv">${stat("Projekte", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(val))}${stat("Netzbetreiber", EB.esc((ps[0] || {}).dsoName || ""))}</dl>
+        <div class="pc-btns">${act("Projekte anzeigen →", () => goFilter({ q: v, cantons: x ? [x] : [] }, "projects.html"), "primary")}${act("Übersicht filtern", () => goFilter({ q: v, cantons: x ? [x] : [] }, "index.html"))}${geo ? EB.btn("GWR-Karte", EB.lnk.gwrMap(geo.lat, geo.lon)) : ""}</div>`;
+    }
+    if (type === "dso") {
+      const ps = P.filter((p) => (p.dsoName || "").split(" | ").includes(v));
+      const bfs = x;
+      if (!window.PROJ) return `<div class="pc-top"><span class="pc-status" style="--c:var(--s4)">Netzbetreiber</span></div><div class="pc-title">${EB.esc(v)}</div>
+        <div class="pc-btns" style="margin-top:10px">${act("Baustellen-Übersicht filtern →", () => goFilter({ dso: v }, "index.html"), "primary")}${EB.btn("ElCom", "https://www.strompreis.elcom.admin.ch")}</div>`;
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s4)">Netzbetreiber</span></div><div class="pc-title">${EB.esc(v)}</div>
+        <dl class="pc-kv">${stat("Projekte im Netzgebiet", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(ps.reduce((s, p) => s + (p.value || 0), 0)))}</dl>
+        <div class="pc-btns">${act("Übersicht filtern →", () => goFilter({ dso: v }, "index.html"), "primary")}${act("Projekte anzeigen", () => goFilter({ dso: v }, "projects.html"))}${bfs ? EB.btn("ElCom-Tarife", EB.lnk.elcom(bfs)) : EB.btn("ElCom", "https://www.strompreis.elcom.admin.ch")}</div>`;
+    }
+    if (type === "auth") {
+      const ps = P.filter((p) => p.authName === v);
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s7)">Vergabestelle</span></div><div class="pc-title">${EB.esc(v)}</div>
+        <dl class="pc-kv">${stat("Projekte", EB.n0(ps.length))}${stat("Zuschläge", EB.chf(ps.reduce((s, p) => s + (p.value || 0), 0)))}</dl>
+        <div class="pc-btns">${act("Projekte anzeigen →", () => goFilter({ q: v }, "projects.html"), "primary")}${act("Übersicht filtern", () => goFilter({ q: v }, "index.html"))}</div>`;
+    }
+    if (type === "role") {
+      const i = window.PROJ.roles.indexOf(v);
+      const n = P.filter((p) => p.roles.includes(i)).length;
+      return `<div class="pc-top"><span class="pc-status" style="--c:var(--s1)">Rolle / Gewerk</span></div><div class="pc-title">${EB.esc(ROLE_NAME(v))}</div>
+        <dl class="pc-kv">${stat("Projekte", EB.n0(n))}</dl>
+        <div class="pc-btns">${act("Übersicht filtern →", () => goFilter({ roles: [i] }, "index.html"), "primary")}${act("Projekte anzeigen", () => goFilter({ roles: [i] }, "projects.html"))}${["architect", "elec_plan", "mep_plan", "civil_eng", "gc", "elec_works", "grid", "hvac", "shell"].includes(v) ? act("Firmen dieser Rolle", () => { location.href = "firms.html#role=" + v; }) : ""}</div>`;
+    }
+    return "";
+  };
+  EB.closePop = () => { const p = document.getElementById("ebpop"); if (p) p.remove(); document.querySelectorAll(".ent.on").forEach((e) => e.classList.remove("on")); };
+  EB.openPop = function (anchor) {
+    const same = anchor.classList.contains("on");
+    EB.closePop(); if (same) return;
+    const html = EB.entCard(anchor.dataset.ent, anchor.dataset.v, anchor.dataset.x);
+    if (!html) return;
+    anchor.classList.add("on");
+    const el = document.createElement("div");
+    el.id = "ebpop"; el.className = "ebcard ebpop"; el.setAttribute("role", "dialog");
+    el.innerHTML = `<button class="ebcard-x" aria-label="Schliessen">✕</button><div class="pcard">${html}</div>`;
+    document.body.append(el);
+    const r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+    const below = r.bottom + h + 10 < innerHeight || r.top - h - 10 < 0;
+    el.style.left = Math.min(Math.max(8, r.left), innerWidth - w - 8) + "px";
+    el.style.top = (below ? r.bottom + 6 : r.top - h - 6) + "px";
+    el.querySelector(".ebcard-x").onclick = EB.closePop;
+    el.querySelectorAll("[data-act]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); const fn = EB._entActions[a.dataset.act]; fn && fn(); }));
+  };
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest(".ent");
+    if (a) { e.preventDefault(); e.stopPropagation(); EB.openPop(a); return; }
+    if (!e.target.closest("#ebpop")) EB.closePop();
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") EB.closePop();
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("ent")) { e.preventDefault(); EB.openPop(e.target); }
+  });
+  window.addEventListener("scroll", (e) => { if (!(e.target.closest && e.target.closest("#ebpop"))) EB.closePop(); }, true);
 })();

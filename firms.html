@@ -75,7 +75,7 @@ function select(name){
   EB.chart("cY",{type:"bar",data:{labels:EB.YEARS,datasets:[EB.bar({label:"Zuschläge",backgroundColor:EB.css("--s1"),data:EB.YEARS.map(y=>f.years[y]||0)})]},options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false},ticks:{precision:0}}},plugins:{legend:{display:false}}}});
 }
 rchips(); draw();
-const h = decodeURIComponent(location.hash.slice(1)); if (h) select(h);
+const h = decodeURIComponent(location.hash.slice(1)); if (h.startsWith("role=")) { st.r = h.slice(5); rchips(); draw(); } else if (h) select(h);
 </script>
 </body>
 </html>

@@ -100,7 +100,7 @@ function draw(){
   const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
-      <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${EB.esc(g.dso||"–")}</td>
+      <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${g.dso?EB.entList("dso",g.dso,"<br>"):"–"}</td>
       <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid)}" target="_blank" rel="noopener">Objekt auf Karte ↗</a></td></tr>`).join("")+"</tbody>";
 }
 let TOP = [], FP = [];

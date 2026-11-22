@@ -165,15 +165,14 @@ function drawFirms(F){
   const rows = Object.entries(cnt).sort((a,b)=>b[1].n-a[1].n||b[1].v-a[1].v).slice(0,25);
   const max = rows.length?rows[0][1].n:1;
   document.getElementById("firmTbl").innerHTML = `<thead><tr><th>Firma</th><th class="num">Projekte</th><th style="width:30%"></th><th class="num">Projektvolumen</th><th></th></tr></thead><tbody>`+
-    rows.map(([n,o])=>`<tr data-f="${EB.esc(n)}" title="Klick: alle Diagramme auf diese Firma filtern" class="${EB.filters.firm===n?"sel":""}"><td>${EB.esc(n)}</td><td class="num">${o.n}</td><td><div class="bar-inline" style="width:${100*o.n/max}%"></div></td><td class="num">${EB.chf(o.v)}</td><td><a href="${EB.lnk.firm(n)}" onclick="event.stopPropagation()" title="Firmenseite">→</a></td></tr>`).join("")+"</tbody>";
-  document.querySelectorAll("#firmTbl tbody tr").forEach(tr=>tr.onclick=()=>{ EB.filters.firm = EB.filters.firm===tr.dataset.f ? "" : tr.dataset.f; EB.apply(); });
+    rows.map(([n,o])=>`<tr class="${EB.filters.firm===n?"sel":""}"><td>${EB.ent("firm",n)}</td><td class="num">${o.n}</td><td><div class="bar-inline" style="width:${100*o.n/max}%"></div></td><td class="num">${EB.chf(o.v)}</td><td></td></tr>`).join("")+"</tbody>";
 }
 function drawTop(F){
   const rows = F.filter(p=>p.value).sort((a,b)=>b.value-a.value).slice(0,40);
   document.getElementById("topTbl").innerHTML = `<thead><tr><th>Projekt</th><th>Ort</th><th>Typ</th><th class="num">Jahr</th><th class="num">Zuschläge</th><th>Bauunternehmen</th><th>Versorger</th></tr></thead><tbody>`+
-    rows.map(p=>`<tr onclick="location.href='${EB.lnk.proj(p.id)}'" onmouseenter="hl('${p.id}')" onmouseleave="hl(null)"><td><b>${EB.esc(p.title)}</b><div class="small muted">${EB.esc(p.authName)}</div></td><td>${EB.esc(p.munName||"–")} ${p.canton}</td>
+    rows.map(p=>`<tr onclick="location.href='${EB.lnk.proj(p.id)}'" onmouseenter="hl('${p.id}')" onmouseleave="hl(null)"><td><b>${EB.esc(p.title)}</b><div class="small muted">${EB.esc(p.authName)}</div></td><td>${p.munName?EB.ent("mun",p.munName,p.munName+" "+p.canton,p.canton):"– "+p.canton}</td>
       <td><span class="badge t${p.type}">${p.typeName}</span></td><td class="num">${p.year}</td><td class="num">${EB.chf(p.value)}</td>
-      <td class="small">${p.con.map(i=>EB.esc(EB.firmName(i))).join("<br>")||"–"}</td><td class="small">${EB.esc(p.dsoName||"–")}</td></tr>`).join("")+"</tbody>";
+      <td class="small">${p.con.map(i=>EB.ent("firm",EB.firmName(i))).join("<br>")||"–"}</td><td class="small">${p.dsoName?EB.entList("dso",p.dsoName,"<br>"):"–"}</td></tr>`).join("")+"</tbody>";
 }
 const projItem = (p) => ({lat:p.geo<=2?p.lat:null, lon:p.lon, label:p.title, sub:`${p.munName||"–"} ${p.canton} · ${p.typeName} · ${p.year}`, value:EB.chf(p.value), href:EB.lnk.proj(p.id), color:EB.css(EB.TYPE_COLOR[p.type])});
 let MUNROWS = [];
@@ -183,7 +182,7 @@ function drawMun(F){
     if(p.size>=1&&p.size<=4) o.n1++; if(p.size>=3&&p.size<=4) o.n20++; o.v+=p.value||0; o.ps.push(p); if(p.lat){o.lat+=p.lat;o.lon+=p.lon;o.k++;} });
   MUNROWS = Object.values(g).filter(o=>o.n1>0).sort((a,b)=>b.n1-a.n1||b.v-a.v).slice(0,60);
   document.getElementById("munTbl").innerHTML = `<thead><tr><th>Gemeinde</th><th>Netzbetreiber</th><th class="num">Mittel+gross</th><th class="num">Gross</th><th class="num">Summe</th></tr></thead><tbody>`+
-    MUNROWS.map((o,i)=>`<tr data-i="${i}"><td>${EB.esc(o.name)} (${o.c})</td><td class="small">${EB.esc(o.dso||"–")}</td><td class="num">${o.n1}</td><td class="num">${o.n20}</td><td class="num">${EB.chf(o.v,true)}</td></tr>`).join("")+"</tbody>";
+    MUNROWS.map((o,i)=>`<tr data-i="${i}"><td>${EB.ent("mun",o.name,o.name+" ("+o.c+")",o.c)}</td><td class="small">${o.dso?EB.entList("dso",o.dso,"<br>"):"–"}</td><td class="num">${o.n1}</td><td class="num">${o.n20}</td><td class="num">${EB.chf(o.v,true)}</td></tr>`).join("")+"</tbody>";
   document.querySelectorAll("#munTbl tbody tr").forEach(tr=>tr.onclick=()=>{ const o=MUNROWS[+tr.dataset.i];
     EB.listMap(`Projekte in ${o.name} (${o.c})`, o.ps.filter(p=>p.size>=1&&p.size<=4).sort((a,b)=>b.value-a.value).map(projItem), {note:"mittlere und grosse Projekte"}); });
 }
