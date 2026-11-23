@@ -301,3 +301,20 @@ img.emb.logo{border-radius:4px;background:#fff}
 .eb-map .eb-bg{margin-top:6px}
 .eb-map.eb-is-aerial .leaflet-opArea-pane path[stroke="none"]{fill-opacity:0!important}
 .eb-map.eb-is-aerial .leaflet-opArea-pane path{stroke-width:3px}
+
+/* highlighted threshold box (flex pool size classes) */
+.sizebox{display:inline-flex;align-items:center;gap:7px;padding:4px 6px 4px 10px;border:1px solid var(--accent);border-radius:10px;background:var(--accent-soft)}
+.sizebox .sbt{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;padding-right:7px;border-right:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.sizebox .sbi{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--text);margin-left:3px}
+.sizebox .sbi i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.sizebox select{border-color:var(--accent);font-weight:600;background:var(--surface);padding:3px 6px}
+.sizebox select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+/* permit matching card */
+.pk-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:2px 0 14px}
+.pk{border:1px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--surface-2)}
+.pk-v{font-size:22px;font-weight:650;letter-spacing:-.01em}
+.pk-l{font-size:12px;color:var(--text-2);margin-top:1px}
+.pk-n{font-size:11px;color:var(--muted);margin-top:2px}
+.pc-permit .ps-t{-webkit-line-clamp:2}
+@media (max-width:900px){.pk-row{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -4,11 +4,11 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quellen & Methoden · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=f30ab043">
+<link rel="stylesheet" href="assets/style.css?v=65b91375">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="data/validation.js?v=71f753ea"></script>
-<script src="data/emblems.js?v=fbb6acc8"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/gwrlinks.js?v=caee8348"></script><script src="data/comp.js?v=ef98040b"></script>
-<script src="assets/core.js?v=d7f86a9b"></script>
+<script src="data/emblems.js?v=fbb6acc8"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/gwrlinks.js?v=caee8348"></script><script src="data/comp.js?v=ef98040b"></script><script src="data/permits.js?v=76effc7f"></script>
+<script src="assets/core.js?v=41a190c8"></script>
 </head>
 <body>
 <main class="wrap">
@@ -19,7 +19,7 @@
 
   <section class="grid" style="grid-template-columns:220px minmax(0,1fr);margin-top:18px;align-items:start" id="lay">
     <nav class="card toc" style="position:sticky;top:80px"><h3>Inhalt</h3>
-      <a href="#src">1 Datenquellen</a><a href="#pipe">2 Verarbeitung</a><a href="#methods">3 Methoden</a><a href="#methods2" style="padding-left:12px">3b Erweiterungen</a><a href="#viz" style="padding-left:12px">3c Darstellung</a><a href="#break">4 Strukturbruch 2024</a>
+      <a href="#src">1 Datenquellen</a><a href="#pipe">2 Verarbeitung</a><a href="#methods">3 Methoden</a><a href="#methods2" style="padding-left:12px">3b Erweiterungen</a><a href="#viz" style="padding-left:12px">3c Darstellung</a><a href="#permits" style="padding-left:12px">3d Kantonale Baugesuche</a><a href="#break">4 Strukturbruch 2024</a>
       <a href="#val">5 Abgleich BFS</a><a href="#quality">6 Datenqualität</a><a href="#coverage" style="padding-left:12px">6b Abdeckung</a><a href="#spot">7 Stichprobe</a><a href="#limits">8 Grenzen</a><a href="#repro">9 Reproduzieren</a></nav>
     <div class="prose" style="max-width:none">
 
@@ -72,7 +72,7 @@
 <h3>Hintergrundkarte und Netzgebiete</h3>
 <p>Ruhige Vektorkarte aus den generalisierten Landes-, Kantons- und Gemeindegrenzen 2025 (BFS GEOSTAT, aufbereitet durch swiss-maps, BSD-3-Clause; Geodaten nicht-kommerziell, Quellenangabe BFS). swisstopo-Landeskarte erst ab Zoom 12 abgeschwächt, offizieller GWR-Layer ab Zoom 15. <b>Netzgebiet</b> eines Verteilnetzbetreibers = Vereinigung der Gemeinden, die er laut ElCom-Tarifdaten 2026 versorgt; nur Kanten, die genau einmal vorkommen, bilden den Umriss. Gemeinden mit mehreren Betreibern werden ganz eingerechnet. Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie ein Netzgebiet; öffentliche Bilanzgruppen-Perimeter gibt es nicht. Kantonsumrisse entstehen gleich aus den Gemeinden eines Kantons.</p>
 <h3>Flex-Pool je Netzbetreiber</h3>
-<p>Bewilligte und im Bau befindliche GWR-Gebäude ab der Schwelle «mittel» (500/1'000/1'500 m² Geschossfläche) je Netzbetreiber; «gross» ab 5'000/10'000 m². Auf der Karte erscheinen nach Auswahl eines Betreibers zusätzlich die projektierten Gebäude. Gemeindeliste nach Anzahl Baustellen, mit ständiger Wohnbevölkerung 2025 (BFS STATPOP).</p>
+<p>Bewilligte und im Bau befindliche GWR-Gebäude ab der Schwelle «mittel» (wählbar 500–5'000 m² Geschossfläche, Standard 1'500 m²) je Netzbetreiber; «gross» wählbar 2'000–20'000 m² (Standard 5'000 m², immer über «mittel»). Auf der Karte erscheinen nach Auswahl eines Betreibers zusätzlich die projektierten Gebäude. Gemeindeliste nach Anzahl Baustellen, mit ständiger Wohnbevölkerung 2025 (BFS STATPOP).</p>
 <h3>Verknüpfung GWR-Gebäude ↔ simap</h3>
 <p>Vier Stufen (scripts/09_link_gwr_simap.py): <b>sicher</b> – Strasse + Hausnummer aus Titel/Ausführungsort im GWR-Eingangsregister derselben Gemeinde (oder schweizweit eindeutig); <b>Parzelle</b> – in der Publikation genannte Parzellen-/Kataster-Nr. (bzw. EGRID) in derselben Gemeinde; <b>wahrscheinlich</b> – Strassenname im Titel/Ausführungsort, Tief- und Leitungsbau ausgeschlossen, Gebäude ≥ 300 m²; <b>möglich</b> – gleiche Gemeinde und passender öffentlicher Gebäudetyp (Schule, Spital, Sporthalle, Heim, Verwaltung, Kultur, Kirche), Gebäude ≥ 1'000 m², höchstens 2 Kandidaten. Nur «sicher» und «Parzelle» sind belastbar.</p>
 <div class="tscroll" style="max-height:none;margin:6px 0 4px"><table class="tbl"><thead><tr><th>Identifikator</th><th>Vorkommen in simap (65'393 Publikationen)</th><th>Ergebnis</th></tr></thead><tbody>
@@ -93,6 +93,29 @@
 <li><b>Kreisgrössen, nicht linear:</b> GWR-Gebäude – Kreisfläche ∝ √Geschossfläche (500 m² ≈ 3.3 px, 40'000 m² ≈ 10 px Radius); simap-Projekte – Kreisfläche ∝ √Zuschlagssumme (1 Mio ≈ 3.2 px, 100 Mio ≈ 10 px). Eine Skala je Kartentyp, Grössenlegende unter jeder Karte, Grösse unabhängig vom Zoom.</li>
 <li><b>Interaktion:</b> Diagramme filtern beim Klick alle anderen Elemente (Kreuzfilter); Auswahl bleibt hervorgehoben, Überfahren zeigt eine leichtere Hervorhebung. Jede Karte und jedes Diagramm nennt Quelle, Stand und Methode («Wie wird das gemessen?»).</li>
 </ul>
+
+<h2 id="permits">3d Kantonale Baugesuche ↔ GWR-Pipeline</h2>
+<p>Zusätzliche, von simap <b>unabhängige</b> Quelle: die Publikationen der Baugesuche durch Gemeinden und Kantone. Sie erfassen private <i>und</i> öffentliche Bauvorhaben und nennen meist Adresse und Parzelle – also genau die Schlüssel, über die sich ein Baugesuch einem GWR-Gebäude zuordnen lässt (scripts/11_scrape_baupublikationen.py, 11b_fetch_ge_fr_permits.py, 12_link_gwr_permits.py).</p>
+<h3>Quellen</h3>
+<ul>
+<li><b>Amtsblattportal</b> (SECO, gemeinsame Plattform der kantonalen Amtsblätter, <a href="https://www.amtsblattportal.ch/docs/api/" target="_blank" rel="noopener">API ↗</a>): Rubriken «Baugesuche» bzw. Unterrubrik «Baugesuch» von ZH, BE (inkl. ePublikation der Gemeinden), BL, BS, TI, ZG, AR, NW, OW, SH, SO, SZ und VS. Jede Publikation als XML mit Gemeinde (BFS-Nr.), Bauobjekt-Adresse, Parzelle/Kataster, teils Koordinaten (BE, SZ, BL-Geoview-Link). Publikationen bleiben nur rund <b>12 Monate</b> öffentlich (Ablaufdatum) – die Abfrage ist ein rollendes Fenster.</li>
+<li><b>Kanton Zürich, Statistisches Amt</b> – OGD «<a href="https://www.zh.ch/de/politik-staat/statistik-daten/datenkatalog.html#/datasets/2982@statistisches-amt-kanton-zuerich" target="_blank" rel="noopener">Baugesuche im Kanton Zürich</a>» (täglich aus dem Amtsblatt gesammelt, Verlauf seit Herbst 2024, einzelne ältere Einträge).</li>
+<li><b>Canton de Genève, SITG</b> – «<a href="https://vector.sitg.ge.ch/arcgis/rest/services/SIT_AUTOR_DOSSIER/FeatureServer" target="_blank" rel="noopener">Autorisation de construire – Dossier</a>» (Office des autorisations de construire): vollständiges Register mit Punkt, Typ (DD, APA, M …), Status und Link zur Konsultation (SAD); verwendet ab Eingang 2016.</li>
+<li><b>Canton de Fribourg, Geoportal</b> – «<a href="https://maps.fr.ch/ags/rest/services/OpenData/Demandes_de_permis_de_construire_en_traitement/FeatureServer" target="_blank" rel="noopener">Demandes de permis de construire en traitement</a>» (FRIAC/SeCA): hängige Gesuche als Punkte.</li>
+</ul>
+<p class="small muted">Geprüft, aber nicht maschinenlesbar verfügbar: AG (Amtsblatt als PDF, eBau nur für Gesuchsteller), LU, SG, TG, GL, AI, UR, GR (Amtsblätter ausserhalb des Portals bzw. ohne Baugesuchs-Rubrik), VD, NE, JU (Feuille des avis officiels/CAMAC, kein offener Datenbezug). Stadt Bern bietet zusätzlich einen WFS «Baupublikationen» (in BE-Amtsblatt enthalten). Kanton BL publiziert ergänzend Jahressummen (Baugesuche/-bewilligungen je Gemeinde) – nicht objektbezogen.</p>
+<h3>Zuordnung</h3>
+<p>Je Publikation werden Gemeinde, Adresse (Strasse + Hausnummer, auch aus Titel/Beschreibung), Parzellennummern (Kataster, «Parz.», «GB-Nr.», «KTN», «no. di mappa», «parcelle» …), EGID-Nennungen und LV95-Koordinaten gelesen und dem gesamten GWR (alle Gebäude) zugeordnet:</p>
+<ol>
+<li><b>EGID</b> – in der Publikation genannt (in der Praxis kaum vorhanden).</li>
+<li><b>Adresse</b> – gleiche Strasse (normalisiert) und Hausnummer im GWR-Eingangsregister derselben Gemeinde bzw. Postleitzahl.</li>
+<li><b>Parzelle</b> – gleiche Parzellennummer (LPARZ, inkl. Sektions-Präfix wie «WU848») in derselben Gemeinde; Parzellen mit mehr als 12 Gebäuden ausgeschlossen.</li>
+<li><b>Koordinate</b> – Gesuchspunkt (GE, FR, Koordinaten im Text): nächstgelegenes GWR-Gebäude im Umkreis von 25 m.</li>
+</ol>
+<p>Ausgewiesen wird die beste Stufe je Gebäude. «→ GWR» misst die Parsing- und Zuordnungsqualität (Anteil der Publikationen mit irgendeinem GWR-Gebäude), die <b>Trefferquote</b> den Anteil der Pipeline-Gebäude (projektiert, bewilligt, im Bau) mit mindestens einer Publikation. Stichproben zeigen für alle Stufen passende Vorhaben (z. B. «Abbruch … Neubau MFH mit 11 Wohnungen» an der Adresse des bewilligten Neubaus).</p>
+<div class="tscroll" style="max-height:none;margin:6px 0 4px"><table class="tbl" id="permTbl"></table></div>
+<div class="tscroll" style="max-height:none;margin:10px 0 4px"><table class="tbl" id="permCan"></table></div>
+<p class="small muted">Lesart: Die Quote ist eine Untergrenze. Wo nur das 12-Monats-Fenster des Amtsblatts vorliegt (BE, TI, BS …), fehlen die Gesuche der seit längerem bewilligten oder im Bau befindlichen Gebäude; ZH (OGD seit 2024) und GE (Register seit 2016) zeigen, was mit längerer Historie erreichbar ist. Hohe Werte in OW/VS/SH entstehen über die Parzelle.</p>
 
 <h2 id="break">4 Strukturbruch Juli 2024</h2>
 <div class="warnbox">Ab 1.7.2024 neue simap-Plattform; gleichzeitig wirkt das revidierte Beschaffungsrecht (BöB/IVöB 2019) in allen Kantonen. Zahl und Summe publizierter Zuschläge steigen sprunghaft (v. a. offene Verfahren und publizierte freihändige Vergaben). Zudem liefert die neue API pro Projekt nur die jeweils neueste Publikation, daher erscheinen nach 7/2024 weniger Ausschreibungen. Zeitreihen über 2024 hinweg sind deshalb als Niveau-Bruch zu lesen, nicht als Marktwachstum.</div>
@@ -134,6 +157,7 @@
 <li>Netzgebiete sind gemeindescharf angenähert; bei Gemeinden mit mehreren Netzbetreibern ist die reale Grenze feiner. Bilanzgruppen sind nicht abgebildet.</li>
 <li>GWR ↔ simap: simap nennt praktisch nie Gebäude-Identifikatoren; nur ein kleiner Teil der Pipeline-Gebäude ist belastbar verknüpft, die Stufen «wahrscheinlich» und «möglich» sind Prüfhinweise.</li>
 <li>Ausschreibungsseite: nur simap-Verfahren; Wettbewerbe ausserhalb simap und redaktionelle Einstufungen (espazium) fehlen; Kategorien aus Stichworten, ca. ein Drittel «Weitere».</li>
+<li>Kantonale Baugesuche: nur 15 Kantone maschinenlesbar; das Amtsblatt hält Publikationen etwa 12 Monate öffentlich (ältere Links laufen ab); Adressen/Parzellen werden aus Freitext gelesen; eine Publikation kann mehrere Gebäude einer Parzelle betreffen (z. B. Nebenbauten).</li>
 <li>Logos sind Website-Icons (nicht immer das offizielle Logo) und Marken der jeweiligen Unternehmen; Wappen gemäss Wikimedia Commons.</li>
 </ul>
 
@@ -151,8 +175,12 @@ python3 scripts/06_basemap.py                   # Hintergrundkarte, Gemeindegeom
 python3 scripts/08_emblems_logos.py             # Wappen (Commons) und Logos der Netzbetreiber
 python3 scripts/09_link_gwr_simap.py            # GWR-Gebäude ↔ simap (Adresse, Parzelle, Strasse, Gebäudetyp)
 python3 scripts/10_competitions.py              # Ausschreibungen & Wettbewerbe
+python3 scripts/11_scrape_baupublikationen.py   # Amtsblattportal: Baugesuche 14 Kantone → data/raw/baupub/
+# ZH-OGD: curl -o data/raw/baupub/zh_ogd_baugesuche.csv https://daten.statistik.zh.ch/ogd/daten/ressourcen/KTZH_00002982_00006183.csv
+python3 scripts/11b_fetch_ge_fr_permits.py      # GE SITG-Dossiers, FR FRIAC
+python3 scripts/12_link_gwr_permits.py          # GWR-Pipeline ↔ Baugesuche (EGID, Adresse, Parzelle, Koordinate)
 python3 scripts/07_publish.py "Nachricht"       # GitHub Pages</pre>
-<p class="small muted">Datenstand 22.11.2026 (simap bis 21.11.2026, GWR-Export 20.11.2026, ElCom-Tarife 2026, BFS-Bauausgaben bis 2024, STATPOP 2025). Seite zuletzt aktualisiert: 22.11.2026.</p>
+<p class="small muted">Datenstand 22.11.2026 (simap bis 21.11.2026, GWR-Export 20.11.2026, ElCom-Tarife 2026, BFS-Bauausgaben bis 2024, STATPOP 2025). Kantonale Baugesuche abgefragt am 23.11.2026. Seite zuletzt aktualisiert: 23.11.2026.</p>
     </div>
   </section>
 </main>
@@ -175,10 +203,22 @@ const SRC = [
   ["Wege zu Netto-Null für Baumaschinen","EBP 2025 (zitiert BAFU 2025)","464'067 t CO₂e Baumaschinen 2023; > 500 GWh/a Strombedarf 2050","2023/2050","Projektunterlage (nicht öffentlich verlinkt); Primärquelle BAFU","https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html","–"],
   ["Hintergrundkarte (Grenzen)","BFS GEOSTAT (via swiss-maps 4.7.0, BSD-3-Clause)","Generalisierte Landes-, Kantons- und Gemeindegrenzen und Seen 2025 als ruhiger Vektor-Hintergrund","2025","TopoJSON → GeoJSON (scripts/06_basemap.py)","https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html","data/raw/boundaries/"],
   ["Hintergrundkarte (Detail ab Zoom 12)","swisstopo","Landeskarte grau (WMTS), abgeschwächt","aktuell","WMTS","https://www.geo.admin.ch","–"],
+  ["Amtsblattportal – Baugesuche","SECO / kantonale Staatskanzleien","Baugesuchs-Publikationen von ZH, BE, BL, BS, TI, ZG, AR, NW, OW, SH, SO, SZ, VS (Adresse, Parzelle, teils Koordinaten)","rollend ~12 Monate (10.2025–11.2026)","REST-API (XML je Publikation)","https://www.amtsblattportal.ch/docs/api/","data/raw/baupub/"],
+  ["Baugesuche im Kanton Zürich (OGD)","Statistisches Amt Kanton Zürich","Alle im Amtsblatt publizierten Baugesuche ZH, täglich ergänzt","seit Herbst 2024","CSV","https://www.zh.ch/de/politik-staat/statistik-daten/datenkatalog.html#/datasets/2982@statistisches-amt-kanton-zuerich","data/raw/baupub/zh_ogd_baugesuche.csv"],
+  ["Autorisation de construire – Dossier","SITG / Office des autorisations de construire GE","Register aller Bewilligungsdossiers mit Punkt, Typ, Status, SAD-Link","Eingang ab 2016","ArcGIS FeatureServer","https://vector.sitg.ge.ch/arcgis/rest/services/SIT_AUTOR_DOSSIER/FeatureServer","data/raw/baupub/ge/"],
+  ["Demandes de permis de construire en traitement","Kanton Freiburg, SeCA (FRIAC)","Hängige Baugesuche mit Punkt, Verfahren, Art","aktuell","ArcGIS FeatureServer","https://maps.fr.ch/ags/rest/services/OpenData/Demandes_de_permis_de_construire_en_traitement/FeatureServer","data/raw/baupub/fr/"],
   ["Zefix","EHRA","Handelsregister-Suche je Firma (nur Links)","aktuell","Web","https://www.zefix.ch","–"],
 ];
 document.getElementById("srcTbl").innerHTML = `<thead><tr><th>Quelle</th><th>Herausgeber</th><th>Inhalt</th><th>Zeitraum</th><th>Zugriff</th><th>Ablage</th></tr></thead><tbody>`+
   SRC.map(r=>`<tr><td><a href="${r[5]}" target="_blank" rel="noopener"><b>${r[0]}</b> ↗</a></td><td class="small">${r[1]}</td><td class="small">${r[2]}</td><td class="small">${r[3]}</td><td class="small">${r[4]}</td><td class="small"><code>${r[6]}</code></td></tr>`).join("")+"</tbody>";
+if (window.PERMITS) { const S = PERMITS.stats, f = d => d ? d.split("-").reverse().join(".") : "", pct=(a,b)=>b?Math.round(100*a/b)+" %":"–";
+  document.getElementById("permTbl").innerHTML = `<thead><tr><th>Quelle</th><th>Zeitraum</th><th class="num">Publikationen</th><th class="num">mit Adresse</th><th class="num">mit Parzelle</th><th class="num">mit Punkt</th><th class="num">→ GWR-Gebäude</th><th class="num">→ Pipeline-Gebäude</th></tr></thead><tbody>` +
+    S.src.map(x=>`<tr><td>${x.lab}</td><td class="small">${f(x.d0)} – ${f(x.d1)}</td><td class="num">${EB.n0(x.n)}</td><td class="num">${x.addr} %</td><td class="num">${x.par} %</td><td class="num">${x.pt} %</td><td class="num">${pct(x.any,x.n)}</td><td class="num">${EB.n0(x.pipe)}</td></tr>`).join("") + "</tbody>";
+  const C = S.cant.filter(r=>r.cov).sort((a,b)=>b.m/b.n-a.m/a.n), sum = (k)=>C.reduce((a,r)=>a+r[k],0);
+  const cell = (v)=>`${EB.n0(v[1])} / ${EB.n0(v[0])} <span class="muted">(${pct(v[1],v[0])})</span>`;
+  document.getElementById("permCan").innerHTML = `<thead><tr><th>Kanton</th><th class="num">Pipeline-Gebäude</th><th class="num">mit Baugesuch</th><th class="num">projektiert</th><th class="num">bewilligt</th><th class="num">im Bau</th><th class="num">≥ 1'500 m²</th><th class="num">Adr. · Parz. · Pkt.</th></tr></thead><tbody>` +
+    C.map(r=>`<tr><td>${EB.arm("c",r.c,13)}${r.c}</td><td class="num">${EB.n0(r.n)}</td><td class="num"><b>${pct(r.m,r.n)}</b></td><td class="num small">${cell(r.p)}</td><td class="num small">${cell(r.b)}</td><td class="num small">${cell(r.u)}</td><td class="num small">${cell(r.big)}</td><td class="num small">${r.lv.slice(1).map(EB.n0).join(" · ")}</td></tr>`).join("") +
+    `<tr><td><b>Total (15 Kantone)</b></td><td class="num"><b>${EB.n0(sum("n"))}</b></td><td class="num"><b>${pct(sum("m"),sum("n"))}</b></td><td colspan="5" class="small muted">schweizweit ${EB.n0(S.linked_buildings)} von ${EB.n0(S.pipe)} Pipeline-Gebäuden (${pct(S.linked_buildings,S.pipe)})</td></tr></tbody>`; }
 document.getElementById("factorBox").innerHTML = `<dl class="kv">
   <dt>CO₂-Faktor</dt><dd><b>${EB.n1(FA.CO2_T_PER_MCHF)} t CO₂e / Mio CHF</b> = ${EB.n0(FA.MACHINE_CO2_2023_T)} t (Baumaschinen 2023, BAFU via <a href="${EB.SRC.ebp[1]}" target="_blank">EBP 2025 S. 14</a>) ÷ CHF ${EB.n1(FA.BAUAUSGABEN_2023_KCHF/1e6)} Mrd (Bauausgaben CH 2023, <a href="${EB.SRC.bfs[1]}" target="_blank">BFS</a>)</dd>
   <dt>Strom-Faktor</dt><dd><b>${EB.n1(FA.ELEC_MWH_PER_MCHF)} MWh / Mio CHF</b> = ${EB.n0(FA.ELEC_2050_MWH/1000)} GWh/a (Baumaschinen 2050, ZERO-E, EBP 2025 S. 10) ÷ Bauausgaben 2023</dd>

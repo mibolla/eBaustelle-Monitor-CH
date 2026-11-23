@@ -70,6 +70,10 @@
     elcom: ["ElCom – Strompreise/Netzbetreiber je Gemeinde (LINDAS)", "https://www.strompreis.elcom.admin.ch"],
     bfs: ["BFS – Bauausgaben nach Kanton, Auftraggeber, Bauwerk (px-x-0904010000_202)", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0904010000_202/"],
     ebp: ["EBP (2025) Wege zu Netto-Null für Baumaschinen in der Schweiz, S. 10 & 14 (Projektunterlage, nicht öffentlich verlinkt)", "https://www.ebp.ch"],
+    amtsblatt: ["Amtsblattportal (SECO / kantonale Amtsblätter) – Baugesuchs-Publikationen von 14 Kantonen (API)", "https://www.amtsblattportal.ch/docs/api/"],
+    zhOgd: ["Kanton Zürich, Statistisches Amt – OGD «Baugesuche im Kanton Zürich» (KTZH_00002982)", "https://www.zh.ch/de/politik-staat/statistik-daten/datenkatalog.html#/datasets/2982@statistisches-amt-kanton-zuerich"],
+    sitgGe: ["SITG Genève – «Autorisation de construire – Dossier» (SIT_AUTOR_DOSSIER)", "https://vector.sitg.ge.ch/arcgis/rest/services/SIT_AUTOR_DOSSIER/FeatureServer"],
+    friac: ["Kanton Freiburg, Geoportal – «Demandes de permis de construire en traitement» (FRIAC)", "https://maps.fr.ch/ags/rest/services/OpenData/Demandes_de_permis_de_construire_en_traitement/FeatureServer"],
     bafuGhg: ["BAFU – Treibhausgasinventar der Schweiz (Quelle der 464 kt CO₂e Baumaschinen)", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html"],
     methods: ["Quellen & Methoden (dieses Dashboard)", "sources.html"],
     espazium: ["espazium competitions – Wettbewerbsplattform (Referenz, nicht als Datenquelle übernommen)", "https://competitions.espazium.ch/de"],
@@ -92,6 +96,7 @@
     c_roles: { t: "Planer und Gewerke", b: "Anzahl Projekte mit Zuschlag in der jeweiligen Rolle. Architektur: CPV 712*, BKP 291, Wettbewerbe. Elektroplanung: BKP 293, CPV 71323*/71314*, Stichworte. HLKSE-Planung: CPV 71321*. Elektroinstallation: BKP 23*, CPV 4531*. Netz/Ladeinfrastruktur: Trafostation, Kabelanlage, Ladestation u.ä.", s: ["simapNew", "simapArch", "methods"] },
     c_map: { t: "Karte der Projekte", b: "Punkt = Projekt, Kreisfläche ∝ Wurzel der Zuschlagssumme (CHF 1 Mio ≈ 3 px Radius, nicht linear, damit grosse Projekte die Karte nicht überdecken), Farbe = Bauart. Lagegenauigkeit: GWR-Adresse > PLZ > Gemeinde. Projekte nur mit Vergabestellen-Ort werden nicht gezeichnet.", s: ["simapNew", "simapArch", "gwr", "bfsGeo", "swisstopo", "methods"] },
     c_util: { t: "Energieversorger (Verteilnetzbetreiber)", b: "Netzbetreiber der Gemeinde des Projektstandorts gemäss ElCom-Tarifdaten 2026 (LINDAS). In Gemeinden mit mehreren Netzbetreibern werden alle genannt. Zusätzlich: «Versorger als Bauherr» = Vergabestelle ist ein EW/Energieversorger.", s: ["elcom", "simapNew", "simapArch"] },
+    c_permit: { t: "Kantonale Baugesuche ↔ GWR-Pipeline", b: "Unabhängig von simap: Baugesuchs-Publikationen der Kantone werden den GWR-Gebäuden zugeordnet – über EGID (falls genannt), gleiche Adresse (Strasse + Hausnummer in Gemeinde oder PLZ), gleiche Parzellennummer in der Gemeinde (nur Parzellen mit ≤ 12 Gebäuden) oder den Gesuchspunkt (GE, FR, Koordinaten in der Publikation; nächstes GWR-Gebäude im Umkreis von 25 m). Quellen: Amtsblattportal (14 Kantone, Rubriken Baugesuche, rollendes 12-Monats-Fenster), Kanton ZH OGD «Baugesuche» (seit 2024), SITG Genf «Autorisation de construire – Dossier» (seit 2016), Geoportal Freiburg FRIAC (hängige Gesuche). Trefferquote = Pipeline-Gebäude mit mindestens einer zugeordneten Publikation ÷ Pipeline-Gebäude im Kanton; wegen des 12-Monats-Fensters eine Untergrenze.", s: ["gwr", "amtsblatt", "zhOgd", "sitgGe", "friac"] },
     c_flex: { t: "Flex-Pool je Netzbetreiber", b: "Anzahl bewilligter (GSTAT 1002) und im Bau befindlicher (1003) Gebäude mit Geschossfläche ≥ Schwelle «mittel» je Verteilnetzbetreiber; davon «gross» ≥ zweite Schwelle. Optional inkl. projektiert (1001). Zuordnung Gebäude → Gemeinde (GWR) → Netzbetreiber (ElCom-Tarifdaten 2026); in 141 Gemeinden mit mehreren Betreibern wird der erstgenannte verwendet. Geschossfläche = Energiebezugsfläche oder Grundfläche × Geschosse. Kreis auf der Karte = Schwerpunkt aller Pool-Baustellen des Betreibers. <b>Netzgebiet</b> (orange Umrandung beim Überfahren oder nach Auswahl): Vereinigung aller Gemeinden, die der Betreiber laut ElCom 2026 versorgt, auf den generalisierten Gemeindegrenzen 2025 (BFS GEOSTAT). Gemeinden mit mehreren Netzbetreibern werden voll eingerechnet; die tatsächliche Grenze verläuft dort innerhalb der Gemeinde. 5 der 2’123 ElCom-Gemeinden (Fusionen 2026) fehlen in den Grenzen 2025. Hinweis: Eine Bilanzgruppe (Energiehandel) ist nicht dasselbe wie das Netzgebiet; öffentliche Perimeter von Bilanzgruppen gibt es nicht, das Netzgebiet ist die beste verfügbare räumliche Annäherung. Der Kantonsfilter der Seite gilt.", s: ["gwr", "elcom", "bfsGeo", "bfsPop"] },
     c_gwr: { t: "GWR-Gebäudestatus", b: "Gebäude im GWR mit Status projektiert (1001), bewilligt (1002), im Bau (1003) sowie fertiggestellt seit 2016 (1004 mit Baujahr ≥ 2016). Geschossfläche = Energiebezugsfläche (GEBF), wo vorhanden, sonst Grundfläche × Geschosse (GWR hat keine BGF); 61 Gebäude mit unplausibler Grundfläche (> 8'000 m² bei ≥ 6 Geschossen bzw. > 250'000 m²) ohne Fläche. Baukosten sind im öffentlichen GWR-Bezug nicht enthalten. <b>simap-Verknüpfung</b> (Ring um den Punkt, Filter «simap»): <i>sicher</i> = gleiche Adresse (Strasse + Nr.) in Ausschreibung und GWR; <i>Parzelle</i> = Parzellen-Nr. bzw. EGRID aus der Ausschreibung in derselben Gemeinde (EGID kommt in simap-Texten nicht vor); <i>wahrscheinlich</i> = Strassenname im Titel/Ausführungsort, ohne Tief-/Leitungsbau; <i>möglich</i> = gleiche Gemeinde und passender öffentlicher Gebäudetyp (Schule, Spital, Sporthalle …), max. 2 Kandidaten. Nur «sicher» und «Parzelle» sind belastbar; die übrigen Stufen sind Hinweise zur Prüfung.", s: ["gwr", "gwrMap", "elcom", "bfsGeo"] },
     c_val: { t: "Abdeckung im Vergleich zur BFS-Baustatistik", b: "Verhältnis der simap-Zuschlagssumme für Bauleistungen zu den BFS-Bauausgaben öffentlicher Auftraggeber im selben Jahr. Achtung: Zuschläge sind mehrjährige Vertragswerte, die BFS-Werte jährliche Ausgaben; die Quote zeigt die Grössenordnung der Abdeckung, nicht eine exakte Deckung.", s: ["bfs", "simapNew", "simapArch", "methods"] },
@@ -651,7 +656,7 @@
       <div class="pc-sub">${EB.armMun(g.munName, g.canton, 14)}${EB.esc(g.munName || "")} ${EB.arm("c", g.canton, 13)}${EB.esc(g.canton || "")}</div>
       <dl class="pc-kv">${row("Kategorie", EB.esc(o.klass || ""))}${row("Geschossfläche", g.fa ? EB.n0(g.fa) + " m²" : "")}${row("Grundfläche", g.area ? EB.n0(g.area) + " m²" + (g.floors ? ` · ${g.floors} Geschosse` : "") : "")}
         ${row("Wohnungen", g.dw || "")}${row("Baujahr", g.year || "")}${row("Netzbetreiber", g.dso ? EB.entList("dso", g.dso, "<br>") : "")}</dl>
-      ${EB.simapLinks(g.egid)}
+      ${EB.simapLinks(g.egid)}${EB.permitLinks(g.egid, g.canton)}
       <div class="pc-btns">${EB.btn("Zoomen", "", "zoom")}${EB.btn("Objekt auf Luftbild", EB.lnk.gwrObj(g.egid, g.lat, g.lon))}${EB.btn("GWR-Zusatzinformation", EB.lnk.gwrInfo(g.egid))}</div>
       <div class="pc-src">Quelle: BFS, Gebäude- und Wohnungsregister</div></div>`;
   };
@@ -823,15 +828,19 @@
     bfsPop: ["BFS STATPOP, Wohnbevölkerung", "https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-0102010000_101/", "2025"],
     bfsGeo: ["BFS GEOSTAT, Gemeindegrenzen", "https://www.bfs.admin.ch/bfs/de/home/dienstleistungen/geostat/geodaten-bundesstatistik/administrative-grenzen/generalisierte-gemeindegrenzen.html", "2025"],
     swisstopo: ["swisstopo, Landeskarte", "https://www.swisstopo.admin.ch", "aktuell"],
+    amtsblatt: ["Amtsblattportal, Baugesuche", "https://amtsblattportal.ch", "23.11.2026"],
+    zhOgd: ["Kanton ZH, OGD Baugesuche", "https://www.zh.ch/de/politik-staat/statistik-daten/datenkatalog.html#/datasets/2982@statistisches-amt-kanton-zuerich", "23.11.2026"],
+    sitgGe: ["SITG Genève, Autorisations de construire", "https://ge.ch/sitg/", "20.11.2026"],
+    friac: ["Geoportal FR, FRIAC", "https://map.geo.fr.ch", "19.11.2026"],
     bafuGhg: ["BAFU, Treibhausgasinventar", "https://www.bafu.admin.ch/bafu/de/home/themen/klima/zustand/daten/treibhausgasinventar.html", "2023"],
   };
   const KICKER = {
     c_year: "simap · Zuschläge", c_map: "simap · Standorte", c_canton: "simap · Kantone", c_size: "simap · Projektgrösse", c_proc: "simap · Vergabeverfahren",
     c_roles: "simap · Planer & Gewerke", c_util: "ElCom × simap · Netzbetreiber", c_firms: "simap · Firmen", k_value: "simap · Zuschläge",
-    k_emach: "simap · Ausschreibungstexte", k_projects: "simap · Projekte", c_comp: "simap · Ausschreibungen & Wettbewerbe", c_gwr: "GWR · Gebäudestatus", c_flex: "GWR × ElCom · Flex-Pool",
+    k_emach: "simap · Ausschreibungstexte", k_projects: "simap · Projekte", c_comp: "simap · Ausschreibungen & Wettbewerbe", c_gwr: "GWR · Gebäudestatus", c_flex: "GWR × ElCom · Flex-Pool", c_permit: "Kantone × GWR · Baugesuche",
     c_val: "BFS × simap · Abdeckung", c_month: "simap · Datenqualität", c_geo: "Datenqualität · Geokodierung", k_co2: "Schätzung · CO₂", k_elec: "Schätzung · Strom",
   };
-  const METHOD_ANCHOR = { c_year: "#break", c_month: "#break", c_proc: "#break", c_val: "#val", c_geo: "#quality", k_co2: "#methods", k_elec: "#methods" };
+  const METHOD_ANCHOR = { c_permit: "#permits", c_year: "#break", c_month: "#break", c_proc: "#break", c_val: "#val", c_geo: "#quality", k_co2: "#methods", k_elec: "#methods" };
   EB.decorateCard = function (card) {
     if (card.classList.contains("kpi") || card.dataset.dec === "1" && card.querySelector(":scope > .cfoot")) return;
     const keys = [...new Set([...card.querySelectorAll("[data-info]")].map((b) => b.dataset.info))].filter((k) => EB.INFO[k]);
@@ -1019,5 +1028,22 @@
       `<div class="ps-row"><span class="ps-l" style="--c:${EB.LINK_LVL[lvl][1]}" title="Verknüpfung: ${EB.LINK_LVL[lvl][0]}">${lvl}</span>
         <span class="ps-t"><a href="${EB.lnk.proj(pid)}">${EB.esc(t)}</a><span class="muted"> · ${y}${v ? " · " + EB.chf(v) : ""}</span></span>
         <a class="ps-x" href="${u}" target="_blank" rel="noopener" title="Auf simap öffnen">simap ↗</a></div>`).join("") + `</div>`;
+  };
+  /* cantonal building-permit documents of a GWR building (scripts/12_link_gwr_permits.py), independent of simap */
+  EB.PERMIT_LVL = { "EGID": ["EGID in der Publikation", "var(--good)"], "Adresse": ["gleiche Adresse (Strasse + Nr.)", "var(--good)"],
+    "Parzelle": ["gleiche Parzellennummer in der Gemeinde", "var(--good)"], "Koordinate": ["Gesuchspunkt ≤ 25 m, nächstes Gebäude", "var(--accent)"] };
+  EB.PERMIT_SRC = { ABP: ["Amtsblatt", "Kantonales Amtsblatt (amtsblattportal.ch)"], ZH: ["Amtsblatt ZH", "Kanton Zürich, OGD Baugesuche (aus dem Amtsblatt)"],
+    GE: ["SAD GE", "Canton de Genève, Office des autorisations de construire (SITG / SAD)"], FR: ["FRIAC", "Canton de Fribourg, FRIAC / SeCA"] };
+  EB.permitLinks = function (egid, canton) {
+    if (!window.PERMITS) return "";
+    const L = PERMITS.links[String(egid)];
+    if (!L) return PERMITS.stats.covered.includes(canton || "") ? `<div class="pc-simap none">Baugesuch: keine Publikation gefunden</div>` : "";
+    const rows = L.slice(0, 3).map(([pid, lvl]) => {
+      const p = PERMITS.P[pid]; if (!p) return "";
+      const [src, c, date, d, addr, url, kind] = p, S = EB.PERMIT_SRC[src] || [src, src];
+      return `<div class="ps-row"><span class="ps-l" style="--c:${EB.PERMIT_LVL[lvl][1]}" title="Verknüpfung: ${EB.PERMIT_LVL[lvl][0]}">${lvl}</span>
+        <span class="ps-t" title="${EB.esc(d)}"><span class="muted">${(date || "").split("-").reverse().join(".")}${kind ? " · " + EB.esc(kind) : ""} · </span>${EB.esc(d || "(ohne Beschreibung)")}</span>
+        <a class="ps-x" href="${url}" target="_blank" rel="noopener" title="${S[1]}">${S[0]} ↗</a></div>`; }).join("");
+    return `<div class="pc-simap pc-permit"><div class="ps-h">Baugesuche, kantonal (${L.length})</div>${rows}${L.length > 3 ? `<div class="muted small">+ ${L.length - 3} weitere</div>` : ""}</div>`;
   };
 })();

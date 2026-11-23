@@ -5,14 +5,15 @@
 <title>GWR-Pipeline · Baustellen-Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="assets/style.css?v=f30ab043">
+<link rel="stylesheet" href="assets/style.css?v=65b91375">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/gwr.js?v=e82488c4"></script><script src="data/municipalities.js?v=7dfecca4"></script><script src="data/munigeo.js?v=2e3604c5"></script>
 <script src="data/basemap.js?v=5110ee4a"></script>
 <script src="data/emblems.js?v=fbb6acc8"></script>
 <script src="data/gwrlinks.js?v=caee8348"></script>
-<script src="assets/core.js?v=d7f86a9b"></script>
+<script src="data/permits.js?v=76effc7f"></script>
+<script src="assets/core.js?v=41a190c8"></script>
 </head>
 <body>
 <main class="wrap">
@@ -22,6 +23,7 @@
     <div class="fgroup"><span class="flabel">Kanton</span><select id="fC"><option value="">alle</option></select></div>
     <div class="fgroup"><span class="flabel">Gemeinde</span><input type="text" id="fM" list="mL" placeholder="Gemeinde…" style="width:170px"><datalist id="mL"></datalist><button class="chip on" id="fMx" style="display:none"></button></div>
     <div class="fgroup"><span class="flabel">simap</span><span id="fSim"></span></div>
+    <div class="fgroup"><span class="flabel">Baugesuch</span><span id="fBg"></span></div>
     <div class="fgroup"><span class="flabel">Status</span><span id="fS"></span></div>
     <div class="fgroup"><span class="flabel">Gebäudegrösse</span><select id="fZ"><option value="0">alle</option><option value="500">≥ 500 m² Geschossfl.</option><option value="1500">≥ 1500 m²</option><option value="5000">≥ 5000 m²</option></select></div>
     <div class="fgroup"><span class="flabel">Versorger</span><input type="text" id="fD" list="dL" placeholder="Netzbetreiber…" style="width:200px"><datalist id="dL"></datalist></div>
@@ -38,8 +40,8 @@
   <section class="card" style="margin-top:14px">
     <div class="hd" style="flex-wrap:wrap;gap:10px"><h2>Flex-Pool: aktive Baustellen je Netzbetreiber</h2><span id="iF"></span>
       <span class="hint" style="margin-left:0">Klick auf Balken oder Kreis = Netzbetreiber filtern</span>
-      <span style="margin-left:auto" class="fgroup"><span class="flabel">mittel ab</span><select id="fpMin"><option value="500">500 m²</option><option value="1000">1'000 m²</option><option value="1500">1'500 m²</option></select>
-      <span class="flabel">gross ab</span><select id="fpBig"><option value="5000">5'000 m²</option><option value="10000">10'000 m²</option></select>
+      <span style="margin-left:auto" class="fgroup"><span class="sizebox" title="Grössenklassen nach Geschossfläche: bestimmen, welche Gebäude als mittel bzw. gross gezählt werden"><span class="sbt">Grössenklassen</span><span class="sbi"><i style="background:#86b6ef"></i>mittel ab</span><select id="fpMin"><option value="500">500 m²</option><option value="1000">1'000 m²</option><option value="1500" selected>1'500 m²</option><option value="2500">2'500 m²</option><option value="3500">3'500 m²</option><option value="5000">5'000 m²</option></select>
+      <span class="sbi"><i style="background:#1c5cab"></i>gross ab</span><select id="fpBig"><option value="2000">2'000 m²</option><option value="3000">3'000 m²</option><option value="5000" selected>5'000 m²</option><option value="10000">10'000 m²</option><option value="15000">15'000 m²</option><option value="20000">20'000 m²</option></select></span>
       <span id="mbFP"></span></span></div>
     <p class="small muted" style="margin:-4px 0 10px">Für einen Versorger ist eine einzelne Baustelle Rauschen; alle Baustellen in seinem Netzgebiet bilden einen Pool temporärer Lasten. Gezählt: bewilligte und im Bau befindliche mittlere und grosse Gebäude (GWR) je Verteilnetzbetreiber (ElCom 2026; bei mehreren Betreibern pro Gemeinde der erstgenannte).</p>
     <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)" id="fpLay">
@@ -55,15 +57,23 @@
     <div class="card"><div class="hd"><h2>Gebäudekategorien in der Pipeline</h2><span id="i4"></span><span class="hint">Klick filtert · Top 10, Anzahl</span></div><div class="chartbox"><canvas id="cCls"></canvas></div></div>
     <div class="card"><div class="hd"><h2>Grösse der Pipeline-Gebäude</h2><span id="i5"></span><span class="hint">Klick filtert · Anzahl nach Geschossfläche</span></div><div class="chartbox"><canvas id="cSize"></canvas></div></div>
   </section>
+  <section class="card" style="margin-top:14px" id="permitCard">
+    <div class="hd" style="flex-wrap:wrap;gap:10px"><h2>Kantonale Baugesuche ↔ GWR-Pipeline</h2><span id="iP"></span><span class="hint">unabhängig von simap · Klick auf Balken = Kanton wählen</span></div>
+    <div id="pKpi" class="pk-row"></div>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px" id="pLay">
+      <div><div class="chartbox" style="height:430px"><canvas id="cPer"></canvas></div><div class="legend" id="pLeg" style="margin-top:6px"></div></div>
+      <div><div class="tscroll"><table class="tbl" id="pSrc"></table></div><p class="small muted" id="pNote" style="margin:8px 0 0"></p></div>
+    </div>
+  </section>
   <section class="card" style="margin-top:14px"><div class="hd"><h2>Grösste Gebäude in der Pipeline</h2><span id="i6"></span><span class="sub">nach Geschossfläche</span><span id="mbG" style="margin-left:10px"></span></div>
     <div class="tscroll" style="max-height:480px"><table class="tbl" id="tbl"></table></div></section>
 </main>
 <script>
 EB.shell("gwr.html"); EB.chartDefaults();
-["i1","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex");
+["i1","i3","i4","i5","i6"].forEach(i=>document.getElementById(i).outerHTML=EB.info("c_gwr")); document.getElementById("iF").outerHTML=EB.info("c_flex"); document.getElementById("iP").outerHTML=EB.info("c_permit");
 const G = window.GWR, GC = G.cols, MUN = window.MUN;
 const GL = G.rows.map(r=>{ const o={}; GC.forEach((k,i)=>o[k]=r[i]); const m=G.mun[o.mun].split("|"); o.munName=m[0]; o.canton=m[1]; o.bfs=+m[2]; o.dso=(MUN[o.bfs]||[])[2]||""; return o; });
-const st = { sim:"", sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
+const st = { bg:"", sim:"", sel:[0,1,2], c:"", m:"", z:0, d:"", cls:null, sb:null };
 /* canton hover / selection on the main map: orange boundary like the grid-operator areas */
 let CANS = [], canHot = null;
 // hovered and selected canton: three orange shades (projektiert / bewilligt / im Bau), others keep their status blue
@@ -123,6 +133,9 @@ const gcol = () => [EB.css("--gwr-proj"), EB.css("--gwr-bew"), EB.css("--gwr-bau
 function simChips(){ const n = window.GWRLINKS ? Object.keys(GWRLINKS).length : 0;
   document.getElementById("fSim").innerHTML = [["","alle"],["mit",`mit Ausschreibung (${EB.n0(n)})`],["ohne","ohne"]].map(([k,l])=>`<button class="chip ${st.sim===k?"on":""}" data-sim="${k}">${l}</button>`).join("");
   document.querySelectorAll("[data-sim]").forEach(b=>b.onclick=()=>{ st.sim=b.dataset.sim; simChips(); draw(); }); }
+function bgChips(){ const n = window.PERMITS ? Object.keys(PERMITS.links).length : 0;
+  document.getElementById("fBg").innerHTML = [["","alle"],["mit",`mit Publikation (${EB.n0(n)})`],["ohne","ohne"]].map(([k,l])=>`<button class="chip ${st.bg===k?"on":""}" data-bg="${k}" title="Kantonale Baugesuchs-Publikation gefunden (Amtsblatt, ZH-OGD, GE-SAD, FR-FRIAC)">${l}</button>`).join("");
+  document.querySelectorAll("[data-bg]").forEach(b=>b.onclick=()=>{ st.bg=b.dataset.bg; bgChips(); draw(); }); }
 function chips(){ document.getElementById("fS").innerHTML = G.status.slice(0,3).map((s,i)=>`<button class="chip ${st.sel.includes(i)?"on":""}" data-i="${i}">${s}</button>`).join("");
   document.querySelectorAll("#fS [data-i]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; st.sel = st.sel.includes(i)?st.sel.filter(x=>x!==i):[...st.sel,i]; chips(); draw(); }); }
 document.getElementById("fC").onchange=e=>{setCanton(e.target.value);};
@@ -135,7 +148,8 @@ function draw(){
   const bins=[[0,200,"<200 m²"],[200,500,"200–500"],[500,1500,"500–1500"],[1500,5000,"1500–5000"],[5000,1e12,"≥5000 m²"]];
   const inBin = (g,i) => i===5 ? !g.fa : g.fa>=bins[i][0]&&g.fa<bins[i][1];
   const linked = (g) => !!(window.GWRLINKS && GWRLINKS[g.egid]);
-  const pass = (g, skip, allSt) => g.st<3&&(!st.sim||(st.sim==="mit")===linked(g))&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.m||g.munName+"|"+g.canton===st.m)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
+  const permitted = (g) => !!(window.PERMITS && PERMITS.links[g.egid]);
+  const pass = (g, skip, allSt) => g.st<3&&(!st.sim||(st.sim==="mit")===linked(g))&&(!st.bg||(st.bg==="mit")===permitted(g))&&(allSt||st.sel.includes(g.st))&&(skip==="c"||!st.c||g.canton===st.c)&&(!st.m||g.munName+"|"+g.canton===st.m)&&(!st.z||(g.fa||0)>=st.z)&&(!st.d||g.dso.includes(st.d))&&(skip==="cls"||st.cls==null||g.cls===st.cls)&&(skip==="sb"||st.sb==null||inBin(g,st.sb));
   const pipe = GL.filter(g=>pass(g));
   const pipeC = GL.filter(g=>pass(g,"c",true)), pipeK = GL.filter(g=>pass(g,"cls")), pipeS = GL.filter(g=>pass(g,"sb"));
   const tag = [st.cls!=null?"Kategorie: "+G.classes[st.cls]:"", st.sb!=null?"Grösse: "+(bins[st.sb]||[0,0,"unbekannt"])[2]:""].filter(Boolean);
@@ -167,20 +181,58 @@ function draw(){
     onClick:(e,els)=>{ if(!els.length) return; const k=cl[els[0].index][2]; st.cls = st.cls===k?null:k; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Kategorie filtern"}}}}});
   EB.chart("cSize",{type:"bar",data:{labels:bins.map(b=>b[2]).concat(["unbekannt"]),datasets:[EB.bar({label:"Gebäude",backgroundColor:["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281",EB.css("--muted")].map((c,i)=>EB.dim(c,st.sb==null||st.sb===i)),data:[0,1,2,3,4,5].map(i=>pipeS.filter(g=>inBin(g,i)).length)})]},
     options:{scales:{x:EB.axisPlain,y:{grid:{color:()=>EB.css("--grid")},border:{display:false}}},onClick:(e,els)=>{ if(!els.length) return; const i=els[0].index; st.sb = st.sb===i?null:i; draw(); },plugins:{legend:{display:false},tooltip:{callbacks:{footer:()=>"Klick: Grösse filtern"}}}}});
-  drawFlex();
+  drawFlex(); drawPermits(GL.filter(g=>pass(g,"c")));
   layer.setPoints(pipe.filter(g=>!HID_G.has(g.st)).map(g=>({lat:g.lat,lon:g.lon,color:gc[g.st],r:EB.faR(g.fa),ring:!!(window.GWRLINKS&&GWRLINKS[g.egid]),g})));
   EB.mapLegend(document.getElementById("leg"), [0,1,2].map(k=>({key:k,label:G.status[k],color:gc[k],round:true})), HID_G, draw, `<span class="ringkey"></span>mit simap-Ausschreibung · offizieller GWR-Layer ab Zoom 15`); document.getElementById("leg").insertAdjacentHTML("beforeend", EB.sizeLegend());
   const top = pipe.filter(g=>g.fa).sort((a,b)=>b.fa-a.fa).slice(0,80); TOP = top;
   document.getElementById("tbl").innerHTML = `<thead><tr><th>Status</th><th>Adresse / Gemeinde</th><th>Kategorie</th><th class="num">Geschossfl.</th><th class="num">Geschosse</th><th class="num">Whg.</th><th>Netzbetreiber</th><th>Quellen</th></tr></thead><tbody>`+
     top.map(g=>`<tr><td><span class="swatch" style="background:${gc[g.st]};border-radius:50%"></span>${G.status[g.st]}</td><td>${EB.esc(g.addr||"–")}<div class="small muted">${EB.esc(g.munName)} ${g.canton}</div></td><td class="small">${EB.esc(G.classes[g.cls])}</td>
       <td class="num">${EB.n0(g.fa)} m²</td><td class="num">${g.floors||"–"}</td><td class="num">${g.dw||"–"}</td><td class="small">${g.dso?EB.entList("dso",g.dso,"<br>"):"–"}</td>
-      <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid, g.lat, g.lon)}" target="_blank" rel="noopener">Objekt auf Luftbild ↗</a></td></tr>`).join("")+"</tbody>";
+      <td class="small"><a href="${EB.lnk.gwrInfo(g.egid)}" target="_blank" rel="noopener">GWR-Zusatzinfo ↗</a><br><a href="${EB.lnk.gwrObj(g.egid, g.lat, g.lon)}" target="_blank" rel="noopener">Objekt auf Luftbild ↗</a>${permLink(g)}</td></tr>`).join("")+"</tbody>";
 }
 let TOP = [], FP = []; const HID_G = new Set();
-if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; }
+function permLink(g){ const L = window.PERMITS && PERMITS.links[g.egid]; if(!L) return ""; const p = PERMITS.P[L[0][0]]; if(!p) return "";
+  return `<br><a href="${p[5]}" target="_blank" rel="noopener" title="${EB.esc(p[3])} (${L[0][1]})">${(EB.PERMIT_SRC[p[0]]||[p[0]])[0]} ↗</a>${L.length>1?` <span class="muted">+${L.length-1}</span>`:""}`; }
+const PLV = ["EGID","Adresse","Parzelle","Koordinate"], PLC = () => [EB.css("--s4"), EB.css("--s1"), EB.css("--s3"), EB.css("--s7")];
+const PSRC_URL = { ABP:"https://amtsblattportal.ch", ZH:"https://www.zh.ch/de/politik-staat/statistik-daten/datenkatalog.html#/datasets/2982@statistisches-amt-kanton-zuerich",
+  GE:"https://ge.ch/sitg/sitg_catalog/sitg_donnees?keyword=&geodataid=0818", FR:"https://www.fr.ch/territoire-amenagement-et-constructions/permis-de-construire-et-autorisations" };
+function drawPermits(pc){
+  if (!window.PERMITS) return;
+  const S = PERMITS.stats, cov = new Set(S.covered), best = (g) => { const L = PERMITS.links[g.egid]; return L ? PLV.indexOf(L[0][1]) : -1; };
+  const by = {}; pc.forEach(g=>{ if(!cov.has(g.canton)) return; const o = by[g.canton] = by[g.canton] || {c:g.canton,n:0,lv:[0,0,0,0]}; o.n++; const b = best(g); if(b>=0) o.lv[b]++; });
+  const rows = Object.values(by).filter(o=>o.n>=10).map(o=>Object.assign(o,{m:o.lv.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.m/b.n-a.m/a.n);
+  const nCov = rows.reduce((a,o)=>a+o.n,0), mCov = rows.reduce((a,o)=>a+o.m,0), mAll = pc.filter(g=>best(g)>=0).length;
+  const big = pc.filter(g=>cov.has(g.canton)&&(g.fa||0)>=1500), bigM = big.filter(g=>best(g)>=0).length;
+  const pct = (a,b) => b ? Math.round(100*a/b) + " %" : "–";
+  document.getElementById("pKpi").innerHTML = [
+    [EB.n0(mAll), "Pipeline-Gebäude mit Baugesuchs-Publikation", `von ${EB.n0(pc.length)} in der Auswahl`],
+    [pct(mCov,nCov), "Trefferquote in abgedeckten Kantonen", `${EB.n0(mCov)} von ${EB.n0(nCov)} Gebäuden · ${cov.size} Kantone`],
+    [pct(bigM,big.length), "davon Gebäude ≥ 1'500 m²", `${EB.n0(bigM)} von ${EB.n0(big.length)}`],
+    [EB.n0(S.npermits), "ausgewertete Publikationen / Dossiers", S.src.map(x=>(EB.PERMIT_SRC[x.s]||[x.s])[0]).join(" · ")]
+  ].map(([v,l,n])=>`<div class="pk"><div class="pk-v">${v}</div><div class="pk-l">${l}</div><div class="pk-n">${n}</div></div>`).join("");
+  const col = PLC(), used = [0,1,2,3].filter(i=>rows.some(o=>o.lv[i]));
+  EB.chart("cPer",{type:"bar",data:{labels:rows.map(o=>o.c),datasets:used.map(i=>EB.bar({label:PLV[i],stack:"s",backgroundColor:rows.map(o=>EB.dim(col[i],!st.c||st.c===o.c)),data:rows.map(o=>100*o.lv[i]/o.n),borderSkipped:false,borderRadius:0}))},
+    options:{indexAxis:"y",scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+" %"},grid:{color:()=>EB.css("--grid")},border:{display:false}},y:{stacked:true,grid:{display:false},border:{color:()=>EB.css("--border")}}},
+      onClick:(e,els)=>{ if(!els.length) return; const c = rows[els[0].index].c; setCanton(st.c===c?"":c); document.getElementById("fC").value = st.c; },
+      plugins:{legend:{display:false},ebArms:{on:true},tooltip:{callbacks:{title:it=>{const o=rows[it[0].dataIndex]; return `${o.c}: ${EB.n0(o.m)} von ${EB.n0(o.n)} Gebäuden (${pct(o.m,o.n)})`;},
+        label:c=>` ${c.dataset.label}: ${EB.n0(rows[c.dataIndex].lv[used[c.datasetIndex]])}`, footer:()=>"Klick: Kanton wählen"}}}}});
+  document.getElementById("pLeg").innerHTML = used.map(i=>`<span title="${EB.PERMIT_LVL[PLV[i]][0]}"><span class="swatch" style="background:${col[i]}"></span>${PLV[i]}</span>`).join("") +
+    `<span class="muted">Anteil der Pipeline-Gebäude (projektiert, bewilligt, im Bau) mit gefundener Publikation; bester Verknüpfungsgrad</span>`;
+  const f = (d) => d ? d.split("-").reverse().join(".") : "";
+  document.getElementById("pSrc").innerHTML = `<thead><tr><th>Quelle</th><th>Zeitraum</th><th class="num">Publ.</th><th class="num" title="Anteil mit Adresse / Parzelle / Koordinate">Adr. · Parz. · Pkt.</th><th class="num" title="Publikationen, die einem GWR-Gebäude (beliebiger Status) zugeordnet werden konnten">→ GWR</th><th class="num" title="Publikationen, die einem Pipeline-Gebäude zugeordnet wurden">→ Pipeline</th></tr></thead><tbody>` +
+    S.src.map(x=>`<tr><td><a href="${PSRC_URL[x.s]}" target="_blank" rel="noopener">${EB.esc(x.lab)} ↗</a></td><td class="small">${f(x.d0)} – ${f(x.d1)}</td><td class="num">${EB.n0(x.n)}</td>
+      <td class="num small">${x.addr} · ${x.par} · ${x.pt} %</td><td class="num">${pct(x.any,x.n)}</td><td class="num">${EB.n0(x.pipe)}</td></tr>`).join("") +
+    `</tbody><tbody><tr><td colspan="6" class="small muted" style="padding-top:10px">Je Kanton (Amtsblatt): ` + Object.entries(S.pcant).filter(([c])=>c!=="GE"&&c!=="FR").sort((a,b)=>b[1].n-a[1].n).map(([c,o])=>`${EB.arm("c",c,12)}<b>${c}</b> ${EB.n0(o.n)} Publ., ${o.any} % → GWR`).join(" · ") + `</td></tr></tbody>`;
+  const miss = EB.CANTONS.filter(c=>!cov.has(c));
+  document.getElementById("pNote").innerHTML = `Nicht abgedeckt (keine maschinenlesbare Publikation gefunden): ${miss.join(", ")}. Das Amtsblatt hält Publikationen nur rund 12 Monate öffentlich – Gebäude mit älterem Baugesuch finden dort keine Entsprechung; die Trefferquote ist deshalb eine Untergrenze. ZH: Verlauf seit 2024 (OGD), GE: alle Dossiers seit 2016, FR: hängige Gesuche.`;
+}
+if (innerWidth < 1000) { document.getElementById("fpLay").style.gridTemplateColumns = "1fr"; document.getElementById("row1").style.gridTemplateColumns = "1fr"; document.getElementById("pLay").style.gridTemplateColumns = "1fr"; }
 const fpMap = EB.baseMap("fpMap"); 
 const fpLayer = L.layerGroup().addTo(fpMap); const fpArea = L.layerGroup().addTo(fpMap); const fpHoverArea = L.layerGroup().addTo(fpMap); const HID_FP = new Set(); const fpFocus = L.layerGroup().addTo(fpMap); const fpCanton = L.layerGroup().addTo(fpMap); const fpSites = new PL({zoomScale:false, tip:p=>`<b>${G.status[p.g.st]}</b><br>${EB.esc(p.g.addr||p.g.munName)}<br>${EB.n0(p.g.fa)} m²`, card:p=>EB.gwrCard(p.g,{status:G.status[p.g.st],klass:G.classes[p.g.cls]})}); fpSites.addTo(fpMap);
-["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>draw());
+function fpSizeSync(){const mn=document.getElementById("fpMin"),bg=document.getElementById("fpBig");   // gross threshold must stay above mittel
+  [...bg.options].forEach(o=>o.disabled=+o.value<=+mn.value);
+  if(+bg.value<=+mn.value) bg.value=[...bg.options].find(o=>!o.disabled).value;}
+["fpMin","fpBig"].forEach(i=>document.getElementById(i).onchange=()=>{fpSizeSync();draw();}); fpSizeSync();
 /* linked hover: bar <-> bubble, highlighted in orange with the operator's sites */
 let FPM = {}, FPTOP = [], FPBIG = 5000, fpHot = null, FPAREA = null;
 const ORANGE = () => [EB.css("--s2"), "#f3a27f"];   // dark = gross, light = mittel / bubble fill
@@ -348,7 +400,7 @@ document.getElementById("mbFP").outerHTML = EB.mapBtn("mbFP");
 document.getElementById("mbFP").onclick = () => EB.listMap("Flex-Pool: aktive Baustellen je Netzbetreiber", FP.slice(0,40).map(o=>({lat:o.lat/o.n, lon:o.lon/o.n, label:o.op, sub:`${EB.n0(o.fa)} m² Geschossfläche`, value:`${EB.n0(o.n)} · ${EB.n0(o.big)} gross`})), {note:"Punkt = Schwerpunkt der Baustellen"});
 document.getElementById("mbG").outerHTML = EB.mapBtn("mbG");
 document.getElementById("mbG").onclick = () => EB.listMap("Grösste Gebäude in der Pipeline", TOP.map(g=>({lat:g.lat, lon:g.lon, label:g.addr||g.munName, sub:`${G.status[g.st]} · ${G.classes[g.cls]} · ${g.munName} ${g.canton}`, value:EB.n0(g.fa)+" m²", href:EB.lnk.gwrInfo(g.egid), blank:true, color:gcol()[g.st]})), {note:"Farbe = GWR-Status"});
-munOpts(); simChips(); chips(); draw(); fpAlign(); setTimeout(fpAlign, 300); document.addEventListener("eb-redraw", draw);
+munOpts(); simChips(); chips(); bgChips(); draw(); fpAlign(); setTimeout(fpAlign, 300); document.addEventListener("eb-redraw", draw);
 </script>
 </body>
 </html>
